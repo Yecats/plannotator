@@ -500,9 +500,22 @@ if (args[0] === "sessions") {
   // Called by preToolUse hook on EVERY tool call in Copilot CLI.
   // Must filter quickly and only activate for exit_plan_mode.
   // No output = allow the tool call to proceed.
+  //
+  // Input format (preToolUse):
+  //   { sessionId, cwd, toolCalls: [{ id, name, args }] }
+  //   OR legacy: { toolName, toolArgs, cwd, timestamp, sessionId? }
 
   const eventJson = await Bun.stdin.text();
-  let event: { toolName: string; toolArgs: string; cwd: string; timestamp: number; sessionId?: string };
+  let event: {
+    sessionId?: string;
+    cwd?: string;
+    timestamp?: number;
+    // Current format: array of tool calls
+    toolCalls?: Array<{ id: string; name: string; args: string }>;
+    // Legacy/documented format: single tool
+    toolName?: string;
+    toolArgs?: string;
+  };
 
   try {
     event = JSON.parse(eventJson);
@@ -511,8 +524,11 @@ if (args[0] === "sessions") {
     process.exit(0);
   }
 
+  // Extract tool name from either format
+  const toolName = event.toolCalls?.[0]?.name ?? event.toolName;
+
   // FILTER: Only intercept exit_plan_mode
-  if (event.toolName !== "exit_plan_mode") {
+  if (toolName !== "exit_plan_mode") {
     process.exit(0); // No output = allow
   }
 
