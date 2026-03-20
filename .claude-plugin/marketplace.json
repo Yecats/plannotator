@@ -8,11 +8,6 @@
       "name": "plannotator",
       "source": "./apps/hook",
       "description": "Interactive Plan Review: Mark up and refine your plans using a UI, easily share for team collaboration, automatically integrates with plan mode hooks."
-    },
-    {
-      "name": "plannotator-copilot",
-      "source": "./apps/copilot",
-      "description": "Interactive Plan & Code Review for GitHub Copilot CLI. Visual annotations, team sharing, structured feedback."
     }
   ]
 }
