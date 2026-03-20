@@ -119,8 +119,8 @@ export function findCopilotSessionForCwd(cwd: string): string | null {
 export function findCopilotPlanContent(sessionId?: string): string | null {
   const sessionsDir = join(homedir(), ".copilot", "session-state");
 
-  // Primary: use sessionId directly
-  if (sessionId) {
+  // Primary: use sessionId directly (validate UUID to prevent path traversal)
+  if (sessionId && /^[a-f0-9-]{36}$/i.test(sessionId)) {
     const planPath = join(sessionsDir, sessionId, "plan.md");
     if (existsSync(planPath)) {
       return readFileSync(planPath, "utf-8");
