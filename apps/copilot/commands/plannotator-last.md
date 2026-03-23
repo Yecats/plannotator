@@ -1,6 +1,6 @@
 ---
 description: Annotate the last rendered assistant message
-allowed-tools: Bash(plannotator:*)
+allowed-tools: shell(plannotator:*)
 ---
 
 ## Message Annotations

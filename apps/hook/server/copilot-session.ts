@@ -51,7 +51,8 @@ interface CopilotEvent {
  * 4. Most recently modified session overall
  */
 export function findCopilotSessionForCwd(cwd: string): string | null {
-  const sessionsDir = join(homedir(), ".copilot", "session-state");
+  const copilotHome = process.env.COPILOT_HOME || join(homedir(), ".copilot");
+  const sessionsDir = join(copilotHome, "session-state");
   if (!existsSync(sessionsDir)) return null;
 
   const entries = readdirSync(sessionsDir, { withFileTypes: true })
@@ -117,7 +118,8 @@ export function findCopilotSessionForCwd(cwd: string): string | null {
  * to finding the most recently modified plan.md across all sessions.
  */
 export function findCopilotPlanContent(sessionId?: string): string | null {
-  const sessionsDir = join(homedir(), ".copilot", "session-state");
+  const copilotHome = process.env.COPILOT_HOME || join(homedir(), ".copilot");
+  const sessionsDir = join(copilotHome, "session-state");
 
   // Primary: use sessionId directly (validate UUID to prevent path traversal)
   if (sessionId && /^[a-f0-9-]{36}$/i.test(sessionId)) {

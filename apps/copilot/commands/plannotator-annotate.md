@@ -1,6 +1,6 @@
 ---
 description: Open interactive annotation UI for a markdown file
-allowed-tools: Bash(plannotator:*)
+allowed-tools: shell(plannotator:*)
 ---
 
 ## Markdown Annotations
