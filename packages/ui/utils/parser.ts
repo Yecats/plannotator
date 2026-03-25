@@ -251,6 +251,137 @@ export const parseMarkdownToBlocks = (markdown: string): Block[] => {
 export const wrapFeedbackForAgent = (feedback: string): string =>
   planDenyFeedback(feedback);
 
+/**
+ * Convert a single Block back to its markdown source representation.
+ */
+export function blockToMarkdown(block: Block): string {
+  switch (block.type) {
+    case 'heading':
+      return '#'.repeat(block.level ?? 1) + ' ' + block.content;
+    case 'list-item': {
+      const indent = '  '.repeat(block.level ?? 0);
+      const marker = '- ';
+      if (block.checked === true) return `${indent}${marker}[x] ${block.content}`;
+      if (block.checked === false) return `${indent}${marker}[ ] ${block.content}`;
+      return `${indent}${marker}${block.content}`;
+    }
+    case 'blockquote':
+      return '> ' + block.content;
+    case 'code':
+      return '```' + (block.language ?? '') + '\n' + block.content + '\n```';
+    case 'table':
+      return block.content;
+    case 'hr':
+      return '---';
+    case 'paragraph':
+    default:
+      return block.content;
+  }
+}
+
+/**
+ * Convert an array of Blocks back to a markdown string.
+ * Uses startLine gaps from the original markdown to preserve spacing.
+ */
+export function blocksToMarkdown(blocks: Block[], originalMarkdown?: string): string {
+  if (blocks.length === 0) return '';
+
+  const result: string[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const md = blockToMarkdown(block);
+
+    if (i > 0) {
+      const prevBlock = blocks[i - 1];
+      const prevEndLine = estimateBlockEndLine(prevBlock);
+      const gap = block.startLine - prevEndLine - 1;
+      // Insert blank lines to match original spacing (at least one between blocks)
+      const blankLines = Math.max(gap, 1);
+      for (let j = 0; j < blankLines; j++) result.push('');
+    }
+
+    result.push(md);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Estimate the last line a block occupies based on its content.
+ */
+function estimateBlockEndLine(block: Block): number {
+  if (block.type === 'code') {
+    // Opening fence + content lines + closing fence
+    const contentLines = block.content.split('\n').length;
+    return block.startLine + contentLines + 1;
+  }
+  const contentLines = block.content.split('\n').length;
+  return block.startLine + contentLines - 1;
+}
+
+/**
+ * Replace a single block's content in the full markdown string.
+ * Uses startLine to locate the block and replaces its line range.
+ */
+export function replaceBlockInMarkdown(
+  fullMarkdown: string,
+  block: Block,
+  newMarkdown: string,
+  allBlocks: Block[]
+): string {
+  const lines = fullMarkdown.split('\n');
+  const startIdx = block.startLine - 1; // 0-based
+
+  // Find the end of this block: either the next block's startLine - 1 or end of file
+  const blockIndex = allBlocks.findIndex(b => b.id === block.id);
+  let endIdx: number;
+  if (blockIndex < allBlocks.length - 1) {
+    const nextBlock = allBlocks[blockIndex + 1];
+    // Walk back from next block's start to skip blank lines between blocks
+    endIdx = nextBlock.startLine - 2; // 0-based, exclusive of spacing
+    while (endIdx > startIdx && lines[endIdx]?.trim() === '') {
+      endIdx--;
+    }
+    endIdx++; // make exclusive
+  } else {
+    // Last block: go to end of file, but trim trailing blank lines
+    endIdx = lines.length;
+    while (endIdx > startIdx + 1 && lines[endIdx - 1]?.trim() === '') {
+      endIdx--;
+    }
+  }
+
+  const newLines = newMarkdown.split('\n');
+  const result = [
+    ...lines.slice(0, startIdx),
+    ...newLines,
+    ...lines.slice(endIdx),
+  ];
+  return result.join('\n');
+}
+
+/**
+ * Apply multiple block edits to the full markdown.
+ * Edits are applied from bottom-to-top to avoid startLine drift.
+ */
+export function applyBlockEdits(
+  fullMarkdown: string,
+  blocks: Block[],
+  blockEdits: Map<string, string>
+): string {
+  // Sort edited blocks by startLine descending to avoid drift
+  const editedBlocks = blocks
+    .filter(b => blockEdits.has(b.id))
+    .sort((a, b) => b.startLine - a.startLine);
+
+  let result = fullMarkdown;
+  for (const block of editedBlocks) {
+    const newContent = blockEdits.get(block.id)!;
+    result = replaceBlockInMarkdown(result, block, newContent, blocks);
+  }
+  return result;
+}
+
 export const exportAnnotations = (blocks: Block[], annotations: any[], globalAttachments: ImageAttachment[] = [], title: string = 'Plan Feedback', subject: string = 'plan'): string => {
   if (annotations.length === 0 && globalAttachments.length === 0) {
     return 'No changes detected.';

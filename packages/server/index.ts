@@ -115,7 +115,8 @@ const RETRY_DELAY_MS = 500;
 export async function startPlannotatorServer(
   options: ServerOptions
 ): Promise<ServerResult> {
-  const { plan, origin, htmlContent, permissionMode, sharingEnabled = true, shareBaseUrl, pasteApiUrl, onReady, mode, customPlanPath } = options;
+  let { plan } = options;
+  const { origin, htmlContent, permissionMode, sharingEnabled = true, shareBaseUrl, pasteApiUrl, onReady, mode, customPlanPath } = options;
 
   const isRemote = isRemoteSession();
   const configuredPort = getServerPort();
@@ -155,6 +156,7 @@ export async function startPlannotatorServer(
     savedPath?: string;
     agentSwitch?: string;
     permissionMode?: string;
+    editedPlan?: string;
   }) => void;
   let decisionPromise: Promise<{
     approved: boolean;
@@ -162,6 +164,7 @@ export async function startPlannotatorServer(
     savedPath?: string;
     agentSwitch?: string;
     permissionMode?: string;
+    editedPlan?: string;
   }>;
 
   if (mode !== "archive") {
@@ -397,7 +400,13 @@ export async function startPlannotatorServer(
                 agentSwitch?: string;
                 planSave?: { enabled: boolean; customPath?: string };
                 permissionMode?: string;
+                editedPlan?: string;
               };
+
+              // If user edited the plan, update the plan content
+              if (body.editedPlan) {
+                plan = body.editedPlan;
+              }
 
               // Capture feedback if provided (for "approve with notes")
               if (body.feedback) {
@@ -459,7 +468,7 @@ export async function startPlannotatorServer(
 
             // Use permission mode from client request if provided, otherwise fall back to hook input
             const effectivePermissionMode = requestedPermissionMode || permissionMode;
-            resolveDecision({ approved: true, feedback, savedPath, agentSwitch, permissionMode: effectivePermissionMode });
+            resolveDecision({ approved: true, feedback, savedPath, agentSwitch, permissionMode: effectivePermissionMode, ...(body.editedPlan && { editedPlan: body.editedPlan }) });
             return Response.json({ ok: true, savedPath });
           }
 
@@ -472,8 +481,14 @@ export async function startPlannotatorServer(
               const body = (await req.json()) as {
                 feedback?: string;
                 planSave?: { enabled: boolean; customPath?: string };
+                editedPlan?: string;
               };
               feedback = body.feedback || feedback;
+
+              // If user edited the plan, update the plan content
+              if (body.editedPlan) {
+                plan = body.editedPlan;
+              }
 
               // Capture plan save settings
               if (body.planSave !== undefined) {
@@ -492,7 +507,7 @@ export async function startPlannotatorServer(
             }
 
             deleteDraft(draftKey);
-            resolveDecision({ approved: false, feedback, savedPath });
+            resolveDecision({ approved: false, feedback, savedPath, ...(plan !== options.plan && { editedPlan: plan }) });
             return Response.json({ ok: true, savedPath });
           }
 

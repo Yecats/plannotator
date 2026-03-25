@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { parseMarkdownToBlocks, exportAnnotations, exportLinkedDocAnnotations, exportEditorAnnotations, extractFrontmatter, wrapFeedbackForAgent, Frontmatter } from '@plannotator/ui/utils/parser';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { parseMarkdownToBlocks, exportAnnotations, exportLinkedDocAnnotations, exportEditorAnnotations, extractFrontmatter, wrapFeedbackForAgent, applyBlockEdits, Frontmatter } from '@plannotator/ui/utils/parser';
+import { computePlanDiff } from '@plannotator/ui/utils/planDiffEngine';
 import { Viewer, ViewerHandle } from '@plannotator/ui/components/Viewer';
 import { AnnotationPanel } from '@plannotator/ui/components/AnnotationPanel';
 import { ExportModal } from '@plannotator/ui/components/ExportModal';
@@ -115,6 +116,61 @@ const App: React.FC = () => {
   const [planDiffMode, setPlanDiffMode] = useState<PlanDiffMode>('clean');
   const [previousPlan, setPreviousPlan] = useState<string | null>(null);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [blockEdits, setBlockEdits] = useState<Map<string, string>>(new Map());
+
+  const editedMarkdown = useMemo(() => {
+    if (blockEdits.size === 0) return markdown;
+    return applyBlockEdits(markdown, blocks, blockEdits);
+  }, [markdown, blocks, blockEdits]);
+
+  const hasEdits = blockEdits.size > 0;
+
+  // Compute diff for user edits (reuses existing plan diff engine)
+  const editDiff = useMemo(() => {
+    if (!hasEdits) return null;
+    return computePlanDiff(markdown, editedMarkdown);
+  }, [markdown, editedMarkdown, hasEdits]);
+
+  const handleBlockEdit = useCallback((blockId: string, newContent: string) => {
+    setBlockEdits(prev => {
+      const next = new Map(prev);
+      next.set(blockId, newContent);
+      return next;
+    });
+    // Remove annotations on the edited block
+    setAnnotations(prev => prev.filter(a => a.blockId !== blockId));
+    // Remove web-highlighter marks for removed annotations
+    const impacted = annotations.filter(a => a.blockId === blockId);
+    if (impacted.length > 0 && viewerRef.current) {
+      impacted.forEach(a => viewerRef.current?.removeHighlight(a.id));
+    }
+  }, [annotations]);
+
+  const handleDiscardEdits = useCallback(() => {
+    setBlockEdits(new Map());
+  }, []);
+
+  const toggleEditMode = useCallback(() => {
+    setEditMode(prev => {
+      if (prev) {
+        // Exiting edit mode: re-parse blocks from edited markdown if there are edits
+        if (blockEdits.size > 0) {
+          const edited = applyBlockEdits(markdown, blocks, blockEdits);
+          const { frontmatter: fm, content } = extractFrontmatter(edited);
+          setBlocks(parseMarkdownToBlocks(content || edited));
+          if (fm) setFrontmatter(fm);
+        }
+      }
+      return !prev;
+    });
+    // Edit and annotation modes are mutually exclusive
+    if (!editMode) {
+      setEditorMode('selection');
+    }
+  }, [editMode, blockEdits, markdown, blocks]);
 
   const viewerRef = useRef<ViewerHandle>(null);
   const containerRef = useRef<HTMLElement>(null);
@@ -608,7 +664,12 @@ const App: React.FC = () => {
         : autoSaveResultsRef.current;
 
       // Build request body - include integrations if enabled
-      const body: { obsidian?: object; bear?: object; octarine?: object; feedback?: string; agentSwitch?: string; planSave?: { enabled: boolean; customPath?: string }; permissionMode?: string } = {};
+      const body: { obsidian?: object; bear?: object; octarine?: object; feedback?: string; agentSwitch?: string; planSave?: { enabled: boolean; customPath?: string }; permissionMode?: string; editedPlan?: string } = {};
+
+      // Include edited plan if user made edits
+      if (hasEdits) {
+        body.editedPlan = editedMarkdown;
+      }
 
       // Include permission mode for Claude Code
       if (origin === 'claude-code') {
@@ -684,6 +745,7 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           feedback: annotationsOutput,
+          ...(hasEdits && { editedPlan: editedMarkdown }),
           planSave: {
             enabled: planSaveSettings.enabled,
             ...(planSaveSettings.customPath && { customPath: planSaveSettings.customPath }),
@@ -1344,6 +1406,9 @@ const App: React.FC = () => {
                 selectedArchiveFile={archive.selectedFile}
                 onArchiveSelect={archive.select}
                 isLoadingArchive={archive.isLoading}
+                editDiffStats={editDiff?.stats ?? null}
+                editedBlockCount={blockEdits.size}
+                onDiscardEdits={hasEdits ? handleDiscardEdits : undefined}
               />
               <ResizeHandle {...tocResize.handleProps} className="hidden lg:block" side="left" />
             </>
@@ -1364,14 +1429,44 @@ const App: React.FC = () => {
             <div className="min-h-full flex flex-col items-center px-2 py-3 md:px-10 md:py-8 xl:px-16 relative z-10">
               {/* Annotation Toolstrip (hidden during plan diff and archive mode) */}
               {!isPlanDiffActive && !archive.archiveMode && (
-                <div className="w-full mb-3 md:mb-4 flex items-center justify-start" style={{ maxWidth: planMaxWidth }}>
-                  <AnnotationToolstrip
-                    inputMethod={inputMethod}
-                    onInputMethodChange={handleInputMethodChange}
-                    mode={editorMode}
-                    onModeChange={handleEditorModeChange}
-                    taterMode={taterMode}
-                  />
+                <div className="w-full mb-3 md:mb-4 flex items-center justify-start gap-2" style={{ maxWidth: planMaxWidth }}>
+                  {!editMode && (
+                    <AnnotationToolstrip
+                      inputMethod={inputMethod}
+                      onInputMethodChange={handleInputMethodChange}
+                      mode={editorMode}
+                      onModeChange={handleEditorModeChange}
+                      taterMode={taterMode}
+                    />
+                  )}
+                  <button
+                    onClick={toggleEditMode}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      editMode
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : hasEdits
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
+                    }`}
+                    title={editMode ? 'Exit edit mode' : 'Edit plan text'}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                    {editMode ? 'Editing' : hasEdits ? 'Edited' : 'Edit'}
+                  </button>
+                  {hasEdits && !editMode && (
+                    <button
+                      onClick={handleDiscardEdits}
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Discard all edits"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Discard
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1427,6 +1522,9 @@ const App: React.FC = () => {
                   imageBaseDir={imageBaseDir}
                   copyLabel={annotateSource === 'message' ? 'Copy message' : annotateSource === 'file' ? 'Copy file' : undefined}
                   archiveInfo={archive.currentInfo}
+                  editMode={editMode}
+                  blockEdits={blockEdits}
+                  onBlockEdit={handleBlockEdit}
                 />
               </div>
             </div>

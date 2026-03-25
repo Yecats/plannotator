@@ -58,6 +58,10 @@ interface SidebarContainerProps {
   selectedArchiveFile: string | null;
   onArchiveSelect: (filename: string) => void;
   isLoadingArchive: boolean;
+  // Edit mode props
+  editDiffStats?: { additions: number; deletions: number; modifications: number } | null;
+  editedBlockCount?: number;
+  onDiscardEdits?: () => void;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
@@ -96,6 +100,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   selectedArchiveFile,
   onArchiveSelect,
   isLoadingArchive,
+  editDiffStats,
+  editedBlockCount,
+  onDiscardEdits,
 }) => {
   return (
     <aside
@@ -234,6 +241,32 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
+        {/* Edit revisions card — shown in TOC tab when user has edits */}
+        {activeTab === "toc" && editDiffStats && editedBlockCount != null && editedBlockCount > 0 && (
+          <div className="mx-2 mt-2 mb-1 p-2 rounded-md bg-blue-500/10 border border-blue-500/20">
+            <div className="flex items-center gap-1.5 mb-1">
+              <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+              </svg>
+              <span className="text-[10px] font-medium text-blue-400">
+                {editedBlockCount} block{editedBlockCount !== 1 ? 's' : ''} edited
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              {editDiffStats.additions > 0 && <span className="text-green-400">+{editDiffStats.additions}</span>}
+              {editDiffStats.deletions > 0 && <span className="text-red-400">-{editDiffStats.deletions}</span>}
+              {editDiffStats.modifications > 0 && <span className="text-amber-400">~{editDiffStats.modifications}</span>}
+            </div>
+            {onDiscardEdits && (
+              <button
+                onClick={onDiscardEdits}
+                className="mt-1.5 text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
+              >
+                Discard all edits
+              </button>
+            )}
+          </div>
+        )}
         {activeTab === "toc" && (
           <TableOfContents
             blocks={blocks}

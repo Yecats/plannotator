@@ -36,6 +36,7 @@ import { type QuickLabel } from '../utils/quickLabels';
 import { PlanDiffBadge } from './plan-diff/PlanDiffBadge';
 import { PinpointOverlay } from './PinpointOverlay';
 import { usePinpoint } from '../hooks/usePinpoint';
+import { EditableBlock } from './EditableBlock';
 import { useAnnotationHighlighter } from '../hooks/useAnnotationHighlighter';
 
 interface ViewerProps {
@@ -69,6 +70,10 @@ interface ViewerProps {
   /** Label for the copy button (default: "Copy plan") */
   copyLabel?: string;
   archiveInfo?: { status: 'approved' | 'denied' | 'unknown'; timestamp: string; title: string } | null;
+  // Edit mode props
+  editMode?: boolean;
+  blockEdits?: Map<string, string>;
+  onBlockEdit?: (blockId: string, newContent: string) => void;
 }
 
 export interface ViewerHandle {
@@ -137,6 +142,9 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
   imageBaseDir,
   copyLabel,
   archiveInfo,
+  editMode = false,
+  blockEdits,
+  onBlockEdit,
 }, ref) => {
   const [copied, setCopied] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
@@ -572,16 +580,22 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
           group.type === 'list-group' ? (
             <div key={group.key} data-pinpoint-group="list" className="py-1 -mx-2 px-2">
               {group.blocks.map(block => (
-                <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} key={block.id} block={block} onOpenLinkedDoc={onOpenLinkedDoc} />
+                <EditableBlock key={block.id} block={block} editMode={editMode} editedContent={blockEdits?.get(block.id)} onEdit={onBlockEdit ?? (() => {})}>
+                  <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} block={block} onOpenLinkedDoc={onOpenLinkedDoc} />
+                </EditableBlock>
               ))}
             </div>
           ) : group.block.type === 'code' && isMermaidLanguage(group.block.language) ? (
-            <MermaidBlock key={group.block.id} block={group.block} />
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+              <MermaidBlock block={group.block} />
+            </EditableBlock>
           ) : group.block.type === 'code' && isGraphvizLanguage(group.block.language) ? (
-            <GraphvizBlock key={group.block.id} block={group.block} />
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+              <GraphvizBlock block={group.block} />
+            </EditableBlock>
           ) : group.block.type === 'code' ? (
-            <CodeBlock
-              key={group.block.id}
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+              <CodeBlock
               block={group.block}
               onHover={inputMethod === 'pinpoint' ? () => {} : (element) => {
                 // Clear any pending leave timeout
@@ -609,8 +623,11 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
               }}
               isHovered={inputMethod !== 'pinpoint' && hoveredCodeBlock?.block.id === group.block.id}
             />
+            </EditableBlock>
           ) : (
-            <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} key={group.block.id} block={group.block} onOpenLinkedDoc={onOpenLinkedDoc} />
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+              <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} block={group.block} onOpenLinkedDoc={onOpenLinkedDoc} />
+            </EditableBlock>
           )
         )}
 

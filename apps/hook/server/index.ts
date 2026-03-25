@@ -67,7 +67,7 @@ import { detectProjectName } from "@plannotator/server/project";
 import { planDenyFeedback } from "@plannotator/shared/feedback-templates";
 import { findSessionLogsForCwd, resolveSessionLogByPpid, findSessionLogsByAncestorWalk, getLastRenderedMessage, type RenderedMessage } from "./session-log";
 import { findCodexRolloutByThreadId, getLastCodexMessage } from "./codex-session";
-import { findCopilotPlanContent, findCopilotSessionForCwd, getLastCopilotMessage } from "./copilot-session";
+import { findCopilotPlanContent, findCopilotSessionForCwd, getLastCopilotMessage, writeCopilotPlanContent } from "./copilot-session";
 import path from "path";
 
 // Embed the built HTML at compile time
@@ -502,7 +502,7 @@ if (args[0] === "sessions") {
   // No output = allow the tool call to proceed.
 
   const eventJson = await Bun.stdin.text();
-  let event: { toolName: string; toolArgs: string; cwd: string; timestamp: number; sessionId?: string };
+  let event: Record<string, unknown>;
 
   try {
     event = JSON.parse(eventJson);
@@ -511,13 +511,26 @@ if (args[0] === "sessions") {
     process.exit(0);
   }
 
+  // Handle both Copilot CLI formats:
+  //   Format A (documented): { toolName, toolArgs, cwd, sessionId }
+  //   Format B (actual):     { toolCalls: [{ name, args }], cwd, sessionId }
+  const toolName = (event.toolName as string)
+    ?? (event.toolCalls as Array<{ name: string }>)?.[0]?.name;
+  const sessionId = (event.sessionId as string) ?? undefined;
+
+  if (process.env.PLANNOTATOR_DEBUG) {
+    const fs = await import("node:fs");
+    fs.appendFileSync("/tmp/plannotator-hook-debug.log",
+      `[${new Date().toISOString()}] raw keys: ${Object.keys(event).join(", ")} | resolved toolName: ${toolName}\n`);
+  }
+
   // FILTER: Only intercept exit_plan_mode
-  if (event.toolName !== "exit_plan_mode") {
+  if (toolName !== "exit_plan_mode") {
     process.exit(0); // No output = allow
   }
 
   // Find plan.md content (sessionId primary, newest plan.md fallback)
-  const planContent = findCopilotPlanContent(event.sessionId);
+  const planContent = findCopilotPlanContent(sessionId);
 
   if (!planContent) {
     // No plan.md found — allow exit_plan_mode to proceed normally
@@ -556,14 +569,24 @@ if (args[0] === "sessions") {
   await Bun.sleep(1500);
   server.stop();
 
+  // If user edited the plan, write it back to plan.md
+  if (result.editedPlan) {
+    writeCopilotPlanContent(result.editedPlan, sessionId);
+  }
+
   // Output Copilot CLI permission decision format
   if (result.approved) {
     console.log(JSON.stringify({
       permissionDecision: "allow",
     }));
   } else {
+    // Build feedback that includes the edited plan if present
+    let feedbackContent = result.feedback || "";
+    if (result.editedPlan) {
+      feedbackContent = `The user has directly revised the plan. Here is the updated plan:\n\n${result.editedPlan}\n\n${feedbackContent ? `Additional feedback:\n\n${feedbackContent}` : "Read the updated plan.md for the latest version."}`;
+    }
     const feedback = planDenyFeedback(
-      result.feedback || "",
+      feedbackContent,
       "exit_plan_mode",
     );
     console.log(JSON.stringify({
