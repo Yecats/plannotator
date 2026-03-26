@@ -39,6 +39,12 @@ Requires the `pi` CLI installed and configured. Plannotator spawns `pi --mode rp
 
 No API keys are managed by Plannotator — Pi uses its own local configuration.
 
+### OpenCode (via OpenCode SDK)
+
+Requires the `opencode` CLI installed and authenticated. Plannotator spawns `opencode serve` and communicates via HTTP + SSE. Models are discovered dynamically from your connected providers.
+
+OpenCode supports session forking, resuming, and runtime permission approvals — the richest capability set of all four providers.
+
 ## Configuration
 
 Provider and model selection is available in **Settings > AI**. These persist via cookies across sessions.
@@ -55,6 +61,8 @@ A session is created lazily on your first question. Until then, no resources are
 
 **Pi sessions** inject the review context as a system prompt prefix, similar to Codex. Pi uses its full default toolset (read, bash, edit, write). Pi sessions are always standalone — fork and resume are not available.
 
+**OpenCode sessions** pass the review context via the `system` field on the prompt API. OpenCode supports forking from a parent session and resuming previous sessions. Permission requests work the same as Claude — approval cards appear inline.
+
 **Diff context handling:** Large diffs are truncated at roughly 40k characters to stay within context limits. However, when you select specific lines and ask a question, the selected code is always sent alongside the question regardless of truncation.
 
 ## Permission requests
@@ -63,19 +71,21 @@ When using Claude, the AI may request permission to use tools like Read, Glob, G
 
 Codex sessions run in a sandboxed read-only mode, so permission requests do not apply.
 
+OpenCode supports the same permission approval flow as Claude — tool calls that need approval appear as inline cards. You can approve or deny each request.
+
 Pi does not expose a permission approval gate over RPC, so tool execution is handled entirely by Pi's own runtime.
 
 ## Reasoning effort
 
 Codex supports a reasoning effort setting with four levels: **Low**, **Medium**, **High**, and **Max**. This is available in the config bar at the bottom of the AI sidebar. Higher effort means slower but more thorough responses.
 
-This setting only applies to Codex — Claude and Pi do not expose a reasoning effort control.
+This setting only applies to Codex — Claude, Pi, and OpenCode do not expose a reasoning effort control.
 
 ## Available settings
 
 | Setting | Description | Provider |
 |---------|-------------|----------|
-| Provider | Claude, Codex, or Pi | All |
+| Provider | Claude, Codex, Pi, or OpenCode | All |
 | Model | Model selection per provider | All |
 | Reasoning effort | Low / Medium / High / Max | Codex only |
 | Default tools | Read, Glob, Grep, WebSearch | Claude only |

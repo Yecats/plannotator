@@ -105,7 +105,8 @@ let CodexClass: any = null;
 
 async function getCodexClass() {
   if (!CodexClass) {
-    const mod = await import("@openai/codex-sdk");
+    // biome-ignore lint/suspicious/noExplicitAny: SDK exports vary between versions
+    const mod = await import("@openai/codex-sdk") as any;
     CodexClass = mod.default ?? mod.Codex;
   }
   return CodexClass;

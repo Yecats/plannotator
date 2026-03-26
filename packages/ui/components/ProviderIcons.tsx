@@ -21,6 +21,14 @@ export const PiIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4'
   </svg>
 );
 
+/** OpenCode icon — extracted from apps/marketing/public/assets/icon-opencode-dark.svg */
+export const OpenCodeIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className={className}>
+    <path d="M3 32V0h26v32zM22 7H10v18h12z" fill="currentColor"/>
+    <path d="M10 13h12v12H10z" fill="currentColor" opacity={0.4}/>
+  </svg>
+);
+
 /** Generic fallback icon for unknown providers */
 const GenericProviderIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
@@ -33,6 +41,7 @@ export const PROVIDER_META: Record<string, { label: string; icon: React.FC<{ cla
   'claude-agent-sdk': { label: 'Claude', icon: ClaudeIcon },
   'codex-sdk': { label: 'Codex', icon: CodexIcon },
   'pi-sdk': { label: 'Pi', icon: PiIcon },
+  'opencode-sdk': { label: 'OpenCode', icon: OpenCodeIcon },
 };
 
 /** Get provider metadata, with fallback for unknown providers. */

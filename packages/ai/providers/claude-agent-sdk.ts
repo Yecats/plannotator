@@ -141,14 +141,15 @@ export class ClaudeAgentSDKProvider implements AIProvider {
 // SDK import cache — resolve once, reuse across all queries
 // ---------------------------------------------------------------------------
 
-let sdkQueryFn: ((args: { prompt: string; options: unknown }) => AsyncIterable<Record<string, unknown>>) | null = null;
+// biome-ignore lint/suspicious/noExplicitAny: SDK types resolved at runtime via dynamic import
+let sdkQueryFn: ((...args: any[]) => any) | null = null;
 
 async function getSDKQuery() {
   if (!sdkQueryFn) {
     const sdk = await import("@anthropic-ai/claude-agent-sdk");
     sdkQueryFn = sdk.query;
   }
-  return sdkQueryFn;
+  return sdkQueryFn!;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +200,8 @@ class ClaudeAgentSDKSession extends BaseSession {
       );
       const options = this.buildQueryOptions();
 
-      const stream = queryFn({ prompt: queryPrompt, options });
+      const stream = queryFn({ prompt: queryPrompt, options }) as
+        AsyncIterable<Record<string, unknown>> & { streamInput: (iter: AsyncIterable<unknown>) => Promise<void> };
       this._activeQuery = stream;
 
       this._firstQuerySent = true;
