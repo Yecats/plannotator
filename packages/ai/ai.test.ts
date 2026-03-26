@@ -326,11 +326,11 @@ describe("ProviderRegistry", () => {
   test("mixed provider types", () => {
     const reg = new ProviderRegistry();
     reg.register(mockProvider("claude-agent-sdk"), "claude-1");
-    reg.register(mockProvider("opencode"), "oc-1");
+    reg.register(mockProvider("opencode-sdk"), "oc-1");
 
     expect(reg.size).toBe(2);
     expect(reg.getByType("claude-agent-sdk").length).toBe(1);
-    expect(reg.getByType("opencode").length).toBe(1);
+    expect(reg.getByType("opencode-sdk").length).toBe(1);
   });
 
   test("disposeAll clears everything", () => {
@@ -403,7 +403,7 @@ describe("AI endpoints", () => {
   test("capabilities lists multiple providers", async () => {
     const { reg, endpoints } = setup();
     reg.register(mockProvider("claude-agent-sdk"), "claude-1");
-    reg.register(mockProvider("opencode"), "oc-1");
+    reg.register(mockProvider("opencode-sdk"), "oc-1");
 
     const res = await endpoints["/api/ai/capabilities"](
       new Request("http://localhost/api/ai/capabilities")
@@ -466,7 +466,7 @@ describe("AI endpoints", () => {
   test("session creation with specific provider ID", async () => {
     const { reg, endpoints } = setup();
     reg.register(mockProvider("claude-agent-sdk"), "claude-fast");
-    reg.register(mockProvider("opencode"), "oc-default");
+    reg.register(mockProvider("opencode-sdk"), "oc-default");
 
     const createRes = await endpoints["/api/ai/session"](
       new Request("http://localhost/api/ai/session", {
@@ -1052,5 +1052,175 @@ describe("mapPiEvent", () => {
       toolUseId: "tc_2",
       result: JSON.stringify({ files: ["a.ts", "b.ts"] }),
     }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OpenCode event mapping
+// ---------------------------------------------------------------------------
+
+import { mapOpenCodeEvent } from "./providers/opencode-sdk.ts";
+
+describe("mapOpenCodeEvent", () => {
+  const SESSION_ID = "oc_session_1";
+
+  test("message.part.delta with text field maps to text_delta", () => {
+    const result = mapOpenCodeEvent("message.part.delta", {
+      sessionID: SESSION_ID,
+      messageID: "msg_1",
+      partID: "part_1",
+      field: "text",
+      delta: "Hello ",
+    }, SESSION_ID);
+    expect(result).toEqual([{ type: "text_delta", delta: "Hello " }]);
+  });
+
+  test("message.part.delta with non-text field returns empty", () => {
+    const result = mapOpenCodeEvent("message.part.delta", {
+      field: "reasoning",
+      delta: "thinking...",
+    }, SESSION_ID);
+    expect(result).toEqual([]);
+  });
+
+  test("message.part.updated with running tool maps to tool_use", () => {
+    const result = mapOpenCodeEvent("message.part.updated", {
+      part: {
+        id: "part_1",
+        type: "tool",
+        tool: "read",
+        callID: "call_1",
+        state: {
+          status: "running",
+          input: { path: "/foo.ts" },
+          time: { start: 1000 },
+        },
+      },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "tool_use",
+      toolName: "read",
+      toolInput: { path: "/foo.ts" },
+      toolUseId: "call_1",
+    }]);
+  });
+
+  test("message.part.updated with completed tool maps to tool_result", () => {
+    const result = mapOpenCodeEvent("message.part.updated", {
+      part: {
+        id: "part_1",
+        type: "tool",
+        tool: "read",
+        callID: "call_1",
+        state: {
+          status: "completed",
+          output: "file contents here",
+          time: { start: 1000, end: 1100 },
+        },
+      },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "tool_result",
+      toolUseId: "call_1",
+      result: "file contents here",
+    }]);
+  });
+
+  test("message.part.updated with error tool maps to tool_result with [Error] prefix", () => {
+    const result = mapOpenCodeEvent("message.part.updated", {
+      part: {
+        id: "part_1",
+        type: "tool",
+        tool: "read",
+        callID: "call_1",
+        state: {
+          status: "error",
+          error: "file not found",
+          time: { start: 1000, end: 1100 },
+        },
+      },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "tool_result",
+      toolUseId: "call_1",
+      result: "[Error] file not found",
+    }]);
+  });
+
+  test("permission.updated maps to permission_request", () => {
+    const result = mapOpenCodeEvent("permission.updated", {
+      id: "perm_1",
+      type: "write_file",
+      title: "Write to /src/foo.ts",
+      callID: "call_2",
+      sessionID: SESSION_ID,
+      metadata: { path: "/src/foo.ts" },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "permission_request",
+      requestId: "perm_1",
+      toolName: "write_file",
+      toolInput: { path: "/src/foo.ts" },
+      title: "Write to /src/foo.ts",
+      toolUseId: "call_2",
+    }]);
+  });
+
+  test("session.status idle maps to result", () => {
+    const result = mapOpenCodeEvent("session.status", {
+      sessionID: SESSION_ID,
+      status: { type: "idle" },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "result",
+      sessionId: SESSION_ID,
+      success: true,
+    }]);
+  });
+
+  test("session.status busy returns empty", () => {
+    const result = mapOpenCodeEvent("session.status", {
+      sessionID: SESSION_ID,
+      status: { type: "busy" },
+    }, SESSION_ID);
+    expect(result).toEqual([]);
+  });
+
+  test("message.updated with error maps to error", () => {
+    const result = mapOpenCodeEvent("message.updated", {
+      info: {
+        id: "msg_1",
+        sessionID: SESSION_ID,
+        role: "assistant",
+        error: {
+          name: "ProviderAuthError",
+          data: { message: "Invalid API key", providerID: "anthropic" },
+        },
+      },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "error",
+      error: "Invalid API key",
+      code: "opencode_message_error",
+    }]);
+  });
+
+  test("session.error maps to error", () => {
+    const result = mapOpenCodeEvent("session.error", {
+      sessionID: SESSION_ID,
+      error: { message: "Something went wrong" },
+    }, SESSION_ID);
+    expect(result).toEqual([{
+      type: "error",
+      error: "Something went wrong",
+      code: "opencode_session_error",
+    }]);
+  });
+
+  test("ignored events return empty", () => {
+    expect(mapOpenCodeEvent("session.created", { sessionID: SESSION_ID }, SESSION_ID)).toEqual([]);
+    expect(mapOpenCodeEvent("session.updated", { sessionID: SESSION_ID }, SESSION_ID)).toEqual([]);
+    expect(mapOpenCodeEvent("server.connected", {}, SESSION_ID)).toEqual([]);
+    expect(mapOpenCodeEvent("file.edited", { file: "foo.ts" }, SESSION_ID)).toEqual([]);
   });
 });

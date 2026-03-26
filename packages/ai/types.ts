@@ -244,7 +244,7 @@ export interface CreateSessionOptions {
  * 3. Streaming responses back as AIMessage events
  *
  * Providers are registered by name and selected at runtime based on the
- * host environment (Claude Code → "claude-agent-sdk", OpenCode → future).
+ * host environment (Claude Code → "claude-agent-sdk", OpenCode → "opencode-sdk").
  */
 export interface AIProvider {
   /** Unique name for this provider (e.g. "claude-agent-sdk"). */
@@ -358,4 +358,12 @@ export interface PiSDKConfig extends AIProviderConfig {
    * doesn't work the same way (e.g., bun build --compile).
    */
   piExecutablePath?: string;
+}
+
+export interface OpenCodeConfig extends AIProviderConfig {
+  type: "opencode-sdk";
+  /** Hostname for the OpenCode server. Default: "127.0.0.1". */
+  hostname?: string;
+  /** Port for the OpenCode server. Default: random. */
+  port?: number;
 }

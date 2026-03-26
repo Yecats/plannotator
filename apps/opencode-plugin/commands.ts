@@ -1,10 +1,15 @@
 /**
  * Command Handlers for OpenCode Plugin
  *
- * Handles /plannotator-review, /plannotator-annotate, and /plannotator-last
- * slash commands. Extracted from the event hook for modularity.
+ * Handles /plannotator-review, /plannotator-annotate, /plannotator-last,
+ * and /plannotator-archive slash commands. Extracted from the event hook
+ * for modularity.
  */
 
+import {
+  startPlannotatorServer,
+  handleServerReady,
+} from "@plannotator/server";
 import {
   startReviewServer,
   handleReviewServerReady,
@@ -14,8 +19,8 @@ import {
   handleAnnotateServerReady,
 } from "@plannotator/server/annotate";
 import { getGitContext, runGitDiffWithContext } from "@plannotator/server/git";
-import { parsePRUrl, checkAuth, fetchPR, getCliName, getMRLabel, getMRNumberLabel, getDisplayRepo } from "@plannotator/server/pr";
-import { resolveMarkdownFile } from "@plannotator/server/resolve-file";
+import { parsePRUrl, checkPRAuth, fetchPR, getCliName, getMRLabel, getMRNumberLabel, getDisplayRepo } from "@plannotator/server/pr";
+import { resolveMarkdownFile } from "@plannotator/shared/resolve-file";
 
 /** Shared dependencies injected by the plugin */
 export interface CommandDeps {
@@ -53,7 +58,7 @@ export async function handleReviewCommand(
     client.app.log({ level: "info", message: `Fetching ${getMRLabel(prRef)} ${getMRNumberLabel(prRef)} from ${getDisplayRepo(prRef)}...` });
 
     try {
-      await checkAuth(prRef);
+      await checkPRAuth(prRef);
     } catch (err) {
       const cliName = getCliName(prRef);
       client.app.log({ level: "error", message: err instanceof Error ? err.message : `${cliName} auth check failed` });
@@ -262,4 +267,29 @@ export async function handleAnnotateLastCommand(
   server.stop();
 
   return result.feedback || null;
+}
+
+export async function handleArchiveCommand(
+  event: any,
+  deps: CommandDeps
+) {
+  const { client, htmlContent, getSharingEnabled, getShareBaseUrl } = deps;
+
+  client.app.log({ level: "info", message: "Opening plan archive..." });
+
+  const server = await startPlannotatorServer({
+    plan: "",
+    origin: "opencode",
+    mode: "archive",
+    sharingEnabled: await getSharingEnabled(),
+    shareBaseUrl: getShareBaseUrl(),
+    htmlContent,
+    onReady: handleServerReady,
+  });
+
+  if (server.waitForDone) {
+    await server.waitForDone();
+  }
+  await Bun.sleep(1500);
+  server.stop();
 }

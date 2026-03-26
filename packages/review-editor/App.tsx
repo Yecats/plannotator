@@ -11,9 +11,11 @@ import { GitLabIcon } from '@plannotator/ui/components/GitLabIcon';
 import { RepoIcon } from '@plannotator/ui/components/RepoIcon';
 import { PullRequestIcon } from '@plannotator/ui/components/PullRequestIcon';
 import { getPlatformLabel, getMRLabel, getMRNumberLabel, getDisplayRepo } from '@plannotator/shared/pr-provider';
-import { getIdentity } from '@plannotator/ui/utils/identity';
+import { configStore, useConfigValue } from '@plannotator/ui/config';
 import { getAgentSwitchSettings, getEffectiveAgentName } from '@plannotator/ui/utils/agentSwitch';
 import { getAIProviderSettings, saveAIProviderSettings, getPreferredModel } from '@plannotator/ui/utils/aiProvider';
+import { AISetupDialog } from '@plannotator/ui/components/AISetupDialog';
+import { needsAISetup } from '@plannotator/ui/utils/aiSetup';
 import { CodeAnnotation, CodeAnnotationType, SelectedLineRange } from '@plannotator/ui/types';
 import { useResizablePanel } from '@plannotator/ui/hooks/useResizablePanel';
 import { useCodeAnnotationDraft } from '@plannotator/ui/hooks/useCodeAnnotationDraft';
@@ -98,6 +100,8 @@ const ReviewApp: React.FC = () => {
   const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [hideViewedFiles, setHideViewedFiles] = useState(false);
   const [origin, setOrigin] = useState<'opencode' | 'claude-code' | 'pi' | null>(null);
+  const [gitUser, setGitUser] = useState<string | undefined>();
+  const [isWSL, setIsWSL] = useState(false);
   const [diffType, setDiffType] = useState<string>('uncommitted');
   const [gitContext, setGitContext] = useState<GitContext | null>(null);
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
@@ -135,7 +139,7 @@ const ReviewApp: React.FC = () => {
   const mrNumberLabel = prMetadata ? getMRNumberLabel(prMetadata) : '';
   const displayRepo = prMetadata ? getDisplayRepo(prMetadata) : '';
 
-  const identity = useMemo(() => getIdentity(), []);
+  const identity = useConfigValue('displayName');
 
   const clearPendingSelection = useCallback(() => {
     setPendingSelection(null);
@@ -192,6 +196,7 @@ const ReviewApp: React.FC = () => {
       reasoningEffort: null as string | null,
     };
   });
+  const [showAISetup, setShowAISetup] = useState(false);
   const [reviewPanelTabOverride, setReviewPanelTabOverride] = useState<'ai' | undefined>(undefined);
   const aiChat = useAIChat({
     patch: diffData?.rawPatch ?? '',
@@ -207,7 +212,11 @@ const ReviewApp: React.FC = () => {
       .then(data => {
         if (data?.available) {
           setAiAvailable(true);
-          setAiProviders(data.providers ?? []);
+          const providers = data.providers ?? [];
+          setAiProviders(providers);
+          if (providers.length > 0 && needsAISetup()) {
+            setShowAISetup(true);
+          }
         }
       })
       .catch(() => {});
@@ -379,8 +388,15 @@ const ReviewApp: React.FC = () => {
         repoInfo?: { display: string; branch?: string };
         prMetadata?: PRMetadata;
         platformUser?: string;
+        viewedFiles?: string[];
         error?: string;
+        isWSL?: boolean;
+        serverConfig?: { displayName?: string; gitUser?: string };
       }) => {
+        // Initialize config store with server-provided values (config file > cookie > default)
+        configStore.init(data.serverConfig);
+        // gitUser drives the "Use git name" button in Settings; stays undefined (button hidden) when unavailable
+        setGitUser(data.serverConfig?.gitUser);
         const apiFiles = parseDiffToFiles(data.rawPatch);
         setDiffData({
           files: apiFiles,
@@ -399,7 +415,12 @@ const ReviewApp: React.FC = () => {
         if (data.repoInfo) setRepoInfo(data.repoInfo);
         if (data.prMetadata) setPrMetadata(data.prMetadata);
         if (data.platformUser) setPlatformUser(data.platformUser);
+        // Initialize viewed files from GitHub's state (set before draft restore so draft takes precedence)
+        if (data.viewedFiles && data.viewedFiles.length > 0) {
+          setViewedFiles(new Set(data.viewedFiles));
+        }
         if (data.error) setDiffError(data.error);
+        if (data.isWSL) setIsWSL(true);
       })
       .catch(() => {
         // Not in API mode - use demo content
@@ -521,14 +542,26 @@ const ReviewApp: React.FC = () => {
   const handleToggleViewed = useCallback((filePath: string) => {
     setViewedFiles(prev => {
       const next = new Set(prev);
-      if (next.has(filePath)) {
-        next.delete(filePath);
-      } else {
+      const willBeViewed = !prev.has(filePath);
+      if (willBeViewed) {
         next.add(filePath);
+      } else {
+        next.delete(filePath);
+      }
+      // Sync viewed state to GitHub (fire and forget — best effort)
+      // Capture willBeViewed inside the callback to ensure correctness with React batching
+      if (prMetadata && prMetadata.platform === 'github') {
+        fetch('/api/pr-viewed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePaths: [filePath], viewed: willBeViewed }),
+        }).catch(() => {
+          // Silently ignore — viewed sync is best-effort
+        });
       }
       return next;
     });
-  }, []);
+  }, [prMetadata]);
 
   // Derive worktree path and base diff type from the composite diffType string
   const { activeWorktreePath, activeDiffBase } = useMemo(() => {
@@ -1246,6 +1279,7 @@ const ReviewApp: React.FC = () => {
               origin={origin}
               mode="review"
               aiProviders={aiProviders}
+              gitUser={gitUser}
             />
 
             {/* Panel toggle */}
@@ -1509,6 +1543,16 @@ const ReviewApp: React.FC = () => {
           showCancel
         />
 
+        {/* AI setup dialog — first-run only */}
+        <AISetupDialog
+          isOpen={showAISetup}
+          providers={aiProviders}
+          onComplete={(providerId) => {
+            setShowAISetup(false);
+            handleAIConfigChange({ providerId });
+          }}
+        />
+
         {/* Completion overlay - shown after approve/feedback */}
         <CompletionOverlay
           submitted={submitted}
@@ -1526,7 +1570,7 @@ const ReviewApp: React.FC = () => {
         />
 
         {/* Update notification */}
-        <UpdateBanner origin={origin} />
+        <UpdateBanner origin={origin} isWSL={isWSL} />
 
         {/* GitHub general comment dialog */}
         {platformCommentDialog && (
