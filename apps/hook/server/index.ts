@@ -613,10 +613,11 @@ if (args[0] === "sessions") {
       permissionDecision: "allow",
     }));
   } else {
-    // Build feedback that includes the edited plan if present
+    // Build feedback — diff summary is already included in annotations output,
+    // so just add a pointer to re-read plan.md if edits were made
     let feedbackContent = result.feedback || "";
     if (result.editedPlan) {
-      feedbackContent = `The user has directly revised the plan. Here is the updated plan:\n\n${result.editedPlan}\n\n${feedbackContent ? `Additional feedback:\n\n${feedbackContent}` : "Read the updated plan.md for the latest version."}`;
+      feedbackContent = `The user has directly edited plan.md. The updated file has been saved — re-read plan.md for the latest version.\n\n${feedbackContent}`;
     }
     const feedback = planDenyFeedback(
       feedbackContent,

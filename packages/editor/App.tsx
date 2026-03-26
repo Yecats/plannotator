@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { parseMarkdownToBlocks, exportAnnotations, exportLinkedDocAnnotations, exportEditorAnnotations, extractFrontmatter, wrapFeedbackForAgent, applyBlockEdits, Frontmatter } from '@plannotator/ui/utils/parser';
+import { parseMarkdownToBlocks, exportAnnotations, exportLinkedDocAnnotations, exportEditorAnnotations, extractFrontmatter, wrapFeedbackForAgent, applyBlockEdits, formatEditDiffSummary, Frontmatter } from '@plannotator/ui/utils/parser';
 import { computePlanDiff } from '@plannotator/ui/utils/planDiffEngine';
 import { Viewer, ViewerHandle } from '@plannotator/ui/components/Viewer';
 import { AnnotationPanel } from '@plannotator/ui/components/AnnotationPanel';
@@ -143,6 +143,12 @@ const App: React.FC = () => {
     if (!hasEdits) return null;
     return computePlanDiff(markdown, editedMarkdown);
   }, [markdown, editedMarkdown, hasEdits]);
+
+  // Compact diff summary for AI feedback and export (avoids sending full document)
+  const editDiffSummary = useMemo(() => {
+    if (!editDiff) return '';
+    return formatEditDiffSummary(editDiff.blocks, editDiff.stats);
+  }, [editDiff]);
 
   const handleBlockEdit = useCallback((blockId: string, newContent: string) => {
     setBlockEdits(prev => {
@@ -895,7 +901,7 @@ const App: React.FC = () => {
     const hasPlanAnnotations = annotations.length > 0 || globalAttachments.length > 0;
     const hasEditorAnnotations = editorAnnotations.length > 0;
 
-    if (!hasPlanAnnotations && !hasDocAnnotations && !hasEditorAnnotations) {
+    if (!hasPlanAnnotations && !hasDocAnnotations && !hasEditorAnnotations && !editDiffSummary) {
       return 'User reviewed the document and has no feedback.';
     }
 
@@ -911,8 +917,13 @@ const App: React.FC = () => {
       output += exportEditorAnnotations(editorAnnotations);
     }
 
+    // Append compact edit diff summary (instead of full document)
+    if (editDiffSummary) {
+      output += `\n${editDiffSummary}`;
+    }
+
     return output;
-  }, [displayBlocks, annotations, globalAttachments, linkedDocHook.getDocAnnotations, editorAnnotations]);
+  }, [displayBlocks, annotations, globalAttachments, linkedDocHook.getDocAnnotations, editorAnnotations, editDiffSummary]);
 
   // Quick-save handlers for export dropdown and keyboard shortcut
   const handleDownloadAnnotations = () => {

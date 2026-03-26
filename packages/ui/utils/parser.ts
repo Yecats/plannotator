@@ -1,5 +1,6 @@
 import { Block, type Annotation, type EditorAnnotation, type ImageAttachment } from '../types';
 import { planDenyFeedback } from '@plannotator/shared/feedback-templates';
+import type { PlanDiffBlock, PlanDiffStats } from './planDiffEngine';
 
 /**
  * Parsed YAML frontmatter as key-value pairs.
@@ -380,6 +381,57 @@ export function applyBlockEdits(
     result = replaceBlockInMarkdown(result, block, newContent, blocks);
   }
   return result;
+}
+
+/**
+ * Format plan diff blocks into a compact markdown summary for AI feedback.
+ * Only includes changed sections (added/removed/modified), skipping unchanged content.
+ */
+export function formatEditDiffSummary(
+  blocks: PlanDiffBlock[],
+  stats: PlanDiffStats,
+): string {
+  const changedBlocks = blocks.filter(b => b.type !== 'unchanged');
+  if (changedBlocks.length === 0) return '';
+
+  let output = `## Plan Edits Summary\n\n`;
+  output += `**${stats.modifications} modification${stats.modifications !== 1 ? 's' : ''}, `;
+  output += `${stats.additions} line${stats.additions !== 1 ? 's' : ''} added, `;
+  output += `${stats.deletions} line${stats.deletions !== 1 ? 's' : ''} removed**\n\n`;
+
+  for (const block of changedBlocks) {
+    switch (block.type) {
+      case 'modified':
+        output += `### Changed:\n`;
+        output += `\`\`\`diff\n`;
+        for (const line of (block.oldContent ?? '').split('\n').filter(Boolean)) {
+          output += `- ${line}\n`;
+        }
+        for (const line of block.content.split('\n').filter(Boolean)) {
+          output += `+ ${line}\n`;
+        }
+        output += `\`\`\`\n\n`;
+        break;
+      case 'added':
+        output += `### Added:\n`;
+        output += `\`\`\`diff\n`;
+        for (const line of block.content.split('\n').filter(Boolean)) {
+          output += `+ ${line}\n`;
+        }
+        output += `\`\`\`\n\n`;
+        break;
+      case 'removed':
+        output += `### Removed:\n`;
+        output += `\`\`\`diff\n`;
+        for (const line of block.content.split('\n').filter(Boolean)) {
+          output += `- ${line}\n`;
+        }
+        output += `\`\`\`\n\n`;
+        break;
+    }
+  }
+
+  return output;
 }
 
 export const exportAnnotations = (blocks: Block[], annotations: any[], globalAttachments: ImageAttachment[] = [], title: string = 'Plan Feedback', subject: string = 'plan'): string => {
