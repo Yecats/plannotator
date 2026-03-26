@@ -128,6 +128,13 @@ const App: React.FC = () => {
 
   const hasEdits = blockEdits.size > 0;
 
+  // Re-parse blocks from edited markdown so the Viewer shows updated content
+  const displayBlocks = useMemo(() => {
+    if (blockEdits.size === 0) return blocks;
+    const { content } = extractFrontmatter(editedMarkdown);
+    return parseMarkdownToBlocks(content || editedMarkdown);
+  }, [blocks, blockEdits, editedMarkdown]);
+
   // Compute diff for user edits (reuses existing plan diff engine)
   const editDiff = useMemo(() => {
     if (!hasEdits) return null;
@@ -154,23 +161,12 @@ const App: React.FC = () => {
   }, []);
 
   const toggleEditMode = useCallback(() => {
-    setEditMode(prev => {
-      if (prev) {
-        // Exiting edit mode: re-parse blocks from edited markdown if there are edits
-        if (blockEdits.size > 0) {
-          const edited = applyBlockEdits(markdown, blocks, blockEdits);
-          const { frontmatter: fm, content } = extractFrontmatter(edited);
-          setBlocks(parseMarkdownToBlocks(content || edited));
-          if (fm) setFrontmatter(fm);
-        }
-      }
-      return !prev;
-    });
+    setEditMode(prev => !prev);
     // Edit and annotation modes are mutually exclusive
     if (!editMode) {
       setEditorMode('selection');
     }
-  }, [editMode, blockEdits, markdown, blocks]);
+  }, [editMode]);
 
   const viewerRef = useRef<ViewerHandle>(null);
   const containerRef = useRef<HTMLElement>(null);
@@ -894,7 +890,7 @@ const App: React.FC = () => {
     }
 
     let output = hasPlanAnnotations
-      ? exportAnnotations(blocks, annotations, globalAttachments, annotateSource === 'message' ? 'Message Feedback' : annotateSource === 'file' ? 'File Feedback' : 'Plan Feedback', annotateSource ?? 'plan')
+      ? exportAnnotations(displayBlocks, annotations, globalAttachments, annotateSource === 'message' ? 'Message Feedback' : annotateSource === 'file' ? 'File Feedback' : 'Plan Feedback', annotateSource ?? 'plan')
       : '';
 
     if (hasDocAnnotations) {
@@ -906,7 +902,7 @@ const App: React.FC = () => {
     }
 
     return output;
-  }, [blocks, annotations, globalAttachments, linkedDocHook.getDocAnnotations, editorAnnotations]);
+  }, [displayBlocks, annotations, globalAttachments, linkedDocHook.getDocAnnotations, editorAnnotations]);
 
   // Quick-save handlers for export dropdown and keyboard shortcut
   const handleDownloadAnnotations = () => {
@@ -1375,7 +1371,7 @@ const App: React.FC = () => {
                 }}
                 onClose={sidebar.close}
                 width={tocResize.width}
-                blocks={blocks}
+                blocks={displayBlocks}
                 annotations={annotations}
                 activeSection={activeSection}
                 onTocNavigate={handleTocNavigate}
@@ -1496,7 +1492,7 @@ const App: React.FC = () => {
                 <Viewer
                   key={linkedDocHook.isActive ? `doc:${linkedDocHook.filepath}` : 'plan'}
                   ref={viewerRef}
-                  blocks={blocks}
+                  blocks={displayBlocks}
                   markdown={markdown}
                   frontmatter={frontmatter}
                   annotations={viewerAnnotations}
@@ -1536,7 +1532,7 @@ const App: React.FC = () => {
           {/* Annotation Panel */}
           <AnnotationPanel
             isOpen={isPanelOpen}
-            blocks={blocks}
+            blocks={displayBlocks}
             annotations={annotations}
             selectedId={selectedAnnotationId}
             onSelect={setSelectedAnnotationId}

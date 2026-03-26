@@ -12,6 +12,7 @@ dist
 dist-ssr
 .astro
 *.local
+*.bun-build
 
 # npm pack output
 *.tgz
