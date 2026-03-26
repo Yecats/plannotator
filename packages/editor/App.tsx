@@ -120,8 +120,8 @@ const App: React.FC = () => {
   const [previousPlan, setPreviousPlan] = useState<string | null>(null);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
 
-  // Edit mode state
-  const [editMode, setEditMode] = useState(false);
+  // Edit mode state — derived from editorMode
+  const editMode = editorMode === 'edit';
   const [blockEdits, setBlockEdits] = useState<Map<string, string>>(new Map());
 
   const editedMarkdown = useMemo(() => {
@@ -162,14 +162,6 @@ const App: React.FC = () => {
   const handleDiscardEdits = useCallback(() => {
     setBlockEdits(new Map());
   }, []);
-
-  const toggleEditMode = useCallback(() => {
-    setEditMode(prev => !prev);
-    // Edit and annotation modes are mutually exclusive
-    if (!editMode) {
-      setEditorMode('selection');
-    }
-  }, [editMode]);
 
   const viewerRef = useRef<ViewerHandle>(null);
   const containerRef = useRef<HTMLElement>(null);
@@ -418,7 +410,8 @@ const App: React.FC = () => {
 
   const handleEditorModeChange = (mode: EditorMode) => {
     setEditorMode(mode);
-    saveEditorMode(mode);
+    // Don't persist 'edit' mode — it's ephemeral
+    if (mode !== 'edit') saveEditorMode(mode);
   };
 
   const handleInputMethodChange = (method: InputMethod) => {
@@ -1449,8 +1442,6 @@ const App: React.FC = () => {
                     mode={editorMode}
                     onModeChange={handleEditorModeChange}
                     taterMode={taterMode}
-                    editMode={editMode}
-                    onEditModeToggle={toggleEditMode}
                     hasEdits={hasEdits}
                   />
                   {hasEdits && !editMode && (
