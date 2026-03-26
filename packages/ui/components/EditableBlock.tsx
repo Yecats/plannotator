@@ -98,7 +98,7 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
 
   if (editing) {
     return (
-      <div className="relative group" data-editing="true">
+      <div className="relative group w-full" data-editing="true">
         <textarea
           ref={textareaRef}
           value={draft}
@@ -126,17 +126,17 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
   // Edit mode but not actively editing: show block with hover indicator
   return (
     <div
-      className={`relative cursor-text transition-all duration-150 rounded-sm ${
+      className={`relative w-full cursor-text rounded-sm ${
         isEdited
-          ? 'border-l-2 border-blue-400/60 pl-2'
-          : 'hover:border-l-2 hover:border-gray-400/40 hover:pl-2'
+          ? 'outline outline-2 outline-offset-2 outline-blue-400/40'
+          : 'hover:outline hover:outline-1 hover:outline-offset-2 hover:outline-gray-400/30'
       }`}
       onClick={startEditing}
       title="Click to edit"
     >
       {children}
       {isEdited && (
-        <span className="absolute -left-1 top-0 text-blue-400 text-xs opacity-70" title="Edited">
+        <span className="absolute -left-4 top-0 text-blue-400 text-xs opacity-70" title="Edited">
           ✎
         </span>
       )}
