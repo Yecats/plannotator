@@ -26,9 +26,10 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
   const [draft, setDraft] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEdited = editedContent !== undefined;
+  const isRemoved = editedContent !== undefined && editedContent.trim() === '';
 
   const startEditing = useCallback(() => {
-    if (!editMode) return;
+    if (!editMode || isRemoved) return;
     const source = editedContent ?? blockToMarkdown(block);
     setDraft(source);
     setEditing(true);
@@ -95,6 +96,11 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
         return base;
     }
   };
+
+  // Block was emptied — hide it immediately
+  if (isRemoved) {
+    return null;
+  }
 
   if (editing) {
     return (
