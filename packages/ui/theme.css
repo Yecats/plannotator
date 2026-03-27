@@ -19,6 +19,7 @@
 @import "./themes/terminal.css";
 @import "./themes/tokyo-night.css";
 @import "./themes/tinacious.css";
+@import "./print.css";
 
 /* Tailwind bridge — maps CSS vars to utility classes */
 @theme inline {

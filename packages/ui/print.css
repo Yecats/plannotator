@@ -1,0 +1,373 @@
+/* Print Stylesheet — optimized for white paper output without annotations */
+
+@media print {
+  /* ========== Page & Layout ========== */
+  
+  * {
+    /* Disable theme transitions during print */
+    transition: none !important;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    line-height: 1.6;
+    font-size: 11pt;
+  }
+
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+
+  /* ========== Hide UI Chrome ========== */
+
+  /* Hide annotations panel, toolbars, sidebars, theme switcher, etc. */
+  [data-annotation-panel],
+  [data-sidebar],
+  [data-sidebar-container],
+  .AnnotationPanel,
+  .SidebarContainer,
+  .Toolbar,
+  .toolbar,
+  .ExportModal,
+  .Modal,
+  .modal,
+  [role="toolbar"],
+  button[aria-label*="Print"],
+  button[aria-label*="Export"],
+  button[aria-label*="Settings"],
+  button[aria-label*="Theme"],
+  .theme-switcher,
+  .settings-panel,
+  .export-modal,
+  nav,
+  aside,
+  header {
+    display: none !important;
+  }
+
+  /* ========== Main Content Area ========== */
+
+  /* Make content full width and visible */
+  main, [role="main"], .Viewer, .viewer {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* ========== Typography ========== */
+
+  /* Headings */
+  h1 {
+    font-size: 24pt;
+    font-weight: bold;
+    margin: 1.5em 0 0.5em 0;
+    page-break-after: avoid;
+    color: #000 !important;
+  }
+
+  h2 {
+    font-size: 18pt;
+    font-weight: bold;
+    margin: 1.25em 0 0.4em 0;
+    page-break-after: avoid;
+    color: #000 !important;
+  }
+
+  h3 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 1em 0 0.3em 0;
+    page-break-after: avoid;
+    color: #000 !important;
+  }
+
+  h4 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 0.8em 0 0.25em 0;
+    page-break-after: avoid;
+    color: #000 !important;
+  }
+
+  h5, h6 {
+    font-size: 11pt;
+    font-weight: bold;
+    margin: 0.6em 0 0.2em 0;
+    page-break-after: avoid;
+    color: #000 !important;
+  }
+
+  /* Paragraphs */
+  p {
+    margin: 0.5em 0;
+    color: #1a1a1a !important;
+  }
+
+  /* ========== Lists ========== */
+
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 2em;
+  }
+
+  li {
+    margin: 0.25em 0;
+    color: #1a1a1a !important;
+  }
+
+  li p {
+    margin: 0.25em 0;
+  }
+
+  /* ========== Code & Preformatted ========== */
+
+  code {
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    font-size: 10pt;
+    background: #f5f5f5 !important;
+    color: #333 !important;
+    padding: 0.1em 0.3em;
+    border-radius: 2px;
+  }
+
+  pre {
+    margin: 1em 0;
+    padding: 1em;
+    background: #f5f5f5 !important;
+    border-left: 3px solid #999;
+    page-break-inside: avoid;
+    overflow: auto;
+  }
+
+  pre code {
+    font-size: 9pt;
+    background: none !important;
+    padding: 0;
+    color: #333 !important;
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* Monochrome syntax highlighting — all code is dark gray on light background */
+  pre code .hljs-attr,
+  pre code .hljs-attribute,
+  pre code .hljs-built_in,
+  pre code .hljs-builtin-name,
+  pre code .hljs-class,
+  pre code .hljs-class-name,
+  pre code .hljs-doctag,
+  pre code .hljs-function,
+  pre code .hljs-name,
+  pre code .hljs-section,
+  pre code .hljs-tag,
+  pre code .hljs-title,
+  pre code .hljs-type,
+  pre code .hljs-variable,
+  pre code .hljs-emphasis,
+  pre code .hljs-string,
+  pre code .hljs-symbol,
+  pre code .hljs-code,
+  pre code .hljs-literal,
+  pre code .hljs-number,
+  pre code .hljs-regexp,
+  pre code .hljs-keyword,
+  pre code .hljs-meta,
+  pre code .hljs-comment,
+  pre code .hljs-deletion,
+  pre code .hljs-addition,
+  pre code .hljs-quote,
+  pre code .hljs-selector-class,
+  pre code .hljs-selector-id,
+  pre code .hljs-selector-pseudo,
+  pre code .hljs-selector-tag,
+  pre code .hljs-template-tag,
+  pre code .hljs-template-variable,
+  pre code .hljs-variable,
+  pre code [class] {
+    color: #333 !important;
+    background: none !important;
+    text-decoration: none !important;
+  }
+
+  /* ========== Tables ========== */
+
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    background: #e8e8e8 !important;
+    page-break-after: avoid;
+  }
+
+  th {
+    font-weight: bold;
+    text-align: left;
+    padding: 0.5em;
+    border: 1px solid #999;
+    color: #000 !important;
+    background: #e8e8e8 !important;
+  }
+
+  td {
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    color: #1a1a1a !important;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f9f9f9 !important;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: white !important;
+  }
+
+  /* ========== Blockquotes ========== */
+
+  blockquote {
+    margin: 1em 0;
+    padding: 0.5em 0 0.5em 1em;
+    border-left: 4px solid #999;
+    background: #f0f0f0 !important;
+    color: #333 !important;
+  }
+
+  blockquote p {
+    margin: 0.5em 0;
+  }
+
+  /* ========== Horizontal Rules ========== */
+
+  hr {
+    margin: 1.5em 0;
+    border: none;
+    border-top: 1px solid #999;
+    page-break-after: avoid;
+  }
+
+  /* ========== Links ========== */
+
+  a {
+    color: #0066cc !important;
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666 !important;
+    word-break: break-all;
+  }
+
+  /* Don't show URLs for internal/anchor links */
+  a[href^="#"]::after {
+    content: "";
+  }
+
+  /* ========== Images ========== */
+
+  img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+    margin: 1em 0;
+  }
+
+  /* ========== Frontmatter / Metadata ========== */
+
+  .FrontmatterCard {
+    margin-bottom: 1em;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    background: #f9f9f9 !important;
+  }
+
+  .FrontmatterCard h3 {
+    margin-top: 0;
+  }
+
+  /* ========== Block Elements ========== */
+
+  .Block {
+    page-break-inside: avoid;
+    margin-bottom: 0.5em;
+  }
+
+  /* ========== Diagrams (Mermaid, Graphviz) ========== */
+
+  .mermaid-wrapper,
+  .graphviz-wrapper,
+  .MermaidBlock,
+  .GraphvizBlock,
+  svg[data-diagram],
+  [data-mermaid],
+  [data-graphviz] {
+    page-break-inside: avoid;
+    margin: 1em 0;
+    max-width: 100%;
+  }
+
+  /* Ensure SVG diagrams scale for print */
+  svg {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* ========== Utilities ========== */
+
+  /* Avoid orphaned headings at page breaks */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  /* Avoid orphaned paragraphs */
+  p, ul, ol, pre, blockquote, table {
+    page-break-after: avoid;
+  }
+
+  /* Allow content blocks to break if necessary */
+  .Block {
+    page-break-inside: auto;
+  }
+
+  /* Print in black ink (force print dialog "print background graphics" if enabled) */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Disable animations and transitions */
+  * {
+    animation: none !important;
+    animation-delay: 0 !important;
+    animation-direction: normal !important;
+    animation-duration: 0 !important;
+    animation-fill-mode: none !important;
+    animation-iteration-count: 1 !important;
+    animation-play-state: paused !important;
+    animation-timing-function: linear !important;
+  }
+}
+
+/* Print-specific light theme override (ensure it applies in print) */
+@media print {
+  body, html {
+    background: white !important;
+    color: #000 !important;
+  }
+}
