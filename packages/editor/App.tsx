@@ -122,6 +122,18 @@ const App: React.FC = () => {
   const viewerRef = useRef<ViewerHandle>(null);
   const containerRef = useRef<HTMLElement>(null);
 
+  // Print mode: add/remove 'plannotator-print' class on body for print styling
+  useEffect(() => {
+    const onBeforePrint = () => document.documentElement.classList.add('plannotator-print');
+    const onAfterPrint = () => document.documentElement.classList.remove('plannotator-print');
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+  }, []);
+
   // Resizable panels
   const panelResize = useResizablePanel({ storageKey: 'plannotator-panel-width' });
   const tocResize = useResizablePanel({

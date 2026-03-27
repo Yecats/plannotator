@@ -1,21 +1,65 @@
 /* Print Stylesheet — optimized for white paper output without annotations.
  *
- * DOM structure (packages/editor/App.tsx):
- *   <div.h-screen>                         ← app shell
- *     <header.h-12.sticky>                  ← toolbar (hide)
- *     <div.flex-1.flex>                     ← body row
- *       <aside.border-r> (SidebarContainer) ← left sidebar (hide)
- *       <main.flex-1>                       ← scrollable content area
- *         <article.bg-card> (Viewer)        ← the plan card (print this)
- *           float-right div (Images/Comment/Copy) ← hide
- *           AnnotationToolstrip (Select/Markup)   ← hide
- *           <pre.bg-muted/50> (code blocks)       ← restyle for white paper
- *           <code.bg-muted> (inline code)         ← restyle for white paper
- *       <aside.border-l> (AnnotationPanel)  ← right panel (hide)
- *   Overlays: .annotation-toolbar, .fixed.z-50 modals
- *
- * Code blocks import highlight.js github-dark.css — must override all hljs colours.
+ * Two-pronged approach:
+ *   1. @media print — standard print styles
+ *   2. .plannotator-print — class added via JS beforeprint/afterprint events
+ *      to guarantee overrides that @media print alone cannot achieve
+ *      (e.g. beating Tailwind layers + hljs github-dark theme).
  */
+
+/* ============================================================
+ * CLASS-BASED OVERRIDES — applied via beforeprint/afterprint JS
+ * These use .plannotator-print on <html> for maximum specificity.
+ * ============================================================ */
+
+/* Code blocks: override github-dark.css .hljs{background:#0d1117} */
+.plannotator-print pre,
+.plannotator-print pre[class] {
+  background: #f5f5f5 !important;
+  background-color: #f5f5f5 !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ccc !important;
+  border-left: 3px solid #888 !important;
+}
+
+.plannotator-print pre code,
+.plannotator-print code.hljs,
+.plannotator-print pre code.hljs,
+.plannotator-print .hljs {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #1a1a1a !important;
+}
+
+.plannotator-print pre span,
+.plannotator-print pre code span,
+.plannotator-print .hljs span,
+.plannotator-print [class*="hljs-"] {
+  color: #1a1a1a !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  text-decoration: none !important;
+  font-style: normal !important;
+}
+
+/* Inline code */
+.plannotator-print code {
+  background: #e8e8e8 !important;
+  background-color: #e8e8e8 !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ccc !important;
+}
+
+/* Inline code inside pre should be transparent (not gray pill) */
+.plannotator-print pre code {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================
+ * @media print — layout, visibility, typography
+ * ============================================================ */
 
 @media print {
   /* ========== Reset & Page ========== */
@@ -44,49 +88,39 @@
 
   /* ========== Hide UI Chrome ========== */
 
-  /* Top header bar (Export, Print, Settings, theme toggle) */
   header {
     display: none !important;
   }
 
-  /* Left sidebar (SidebarContainer) + Right panel (AnnotationPanel) */
   aside {
     display: none !important;
   }
 
-  /* Floating annotation toolbar (portalled to body) */
   .annotation-toolbar {
     display: none !important;
   }
 
-  /* Fixed overlays: modals, export dialog, mobile menus, completion overlay */
   .fixed {
     display: none !important;
   }
 
-  /* Resize handles between panels */
   [data-resize-handle] {
     display: none !important;
   }
 
-  /* AnnotationToolstrip — Select/Markup/Comment/Redline/Label buttons + "how does this work?" */
-  /* It's a direct child flex-wrap container inside the article */
   .flex-wrap {
     display: none !important;
   }
 
-  /* Float-right action buttons: Images, Comment, Copy (inside Viewer article) */
   .float-right {
     display: none !important;
   }
 
-  /* Code block copy buttons (appear on hover) */
   pre .absolute,
   .group > button.absolute {
     display: none !important;
   }
 
-  /* Settings button, theme toggle, any other icon buttons in toolbar area */
   button[title="Settings"],
   button[title="Toggle theme"],
   button[title="Add global comment"],
@@ -97,18 +131,15 @@
 
   /* ========== Main Content Area ========== */
 
-  /* App shell — remove h-screen / overflow constraints */
   .h-screen {
     height: auto !important;
     overflow: visible !important;
   }
 
-  /* Body row flex container */
   .flex-1.flex.overflow-hidden {
     overflow: visible !important;
   }
 
-  /* <main> scrollable area — flatten for print */
   main {
     width: 100% !important;
     overflow: visible !important;
@@ -116,13 +147,11 @@
     padding: 0 !important;
   }
 
-  /* Inner centering wrapper inside <main> */
   main > div {
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  /* <article> — the plan card rendered by Viewer.tsx */
   article {
     width: 100% !important;
     max-width: 100% !important;
@@ -134,12 +163,10 @@
     box-shadow: none !important;
   }
 
-  /* The relative z-50 wrapper around the article */
   article.bg-card {
     background: white !important;
   }
 
-  /* Grid background pattern */
   .bg-grid {
     background-image: none !important;
     background: white !important;
@@ -147,7 +174,6 @@
 
   /* ========== Typography ========== */
 
-  /* Force all text to solid black — override theme's muted/foreground variables */
   body, div, span, p, li, td, th, label, strong, em, b, i {
     color: #1a1a1a !important;
   }
@@ -225,16 +251,6 @@
 
   /* ========== Code & Preformatted ========== */
 
-  /* Override theme CSS variables for print context */
-  :root, [class*="theme-"], body {
-    --muted: #e8e8e8 !important;
-    --foreground: #1a1a1a !important;
-    --card: white !important;
-    --background: white !important;
-    --border: #ccc !important;
-  }
-
-  /* Inline code — <code class="bg-muted text-sm font-mono"> */
   code,
   code[class] {
     font-family: 'Courier New', Monaco, Consolas, monospace !important;
@@ -247,14 +263,10 @@
     border: 1px solid #ccc !important;
   }
 
-  /* Fenced code block wrapper — <div class="relative group my-5"> */
   .group {
     page-break-inside: avoid;
   }
 
-  /* Fenced code block — <pre class="bg-muted/50 border border-border/30">
-   * Must override both background AND background-color to beat Tailwind
-   * utilities that set background-color via CSS variables. */
   pre,
   pre[class] {
     margin: 1em 0 !important;
@@ -269,8 +281,6 @@
     color: #1a1a1a !important;
   }
 
-  /* Code inside pre — <code class="hljs font-mono language-*">
-   * Override github-dark.css: .hljs{background:#0d1117;color:#c9d1d9} */
   pre code,
   pre code[class],
   pre code.hljs,
@@ -287,28 +297,13 @@
     word-wrap: break-word !important;
   }
 
-  /* Override github-dark.css hljs base theme */
   .hljs {
     background: transparent !important;
     background-color: transparent !important;
     color: #1a1a1a !important;
   }
 
-  /* Force ALL hljs syntax spans to monochrome dark text */
   pre span, pre code span, .hljs span, code span,
-  .hljs-keyword, .hljs-string, .hljs-number, .hljs-function,
-  .hljs-title, .hljs-params, .hljs-comment, .hljs-doctag,
-  .hljs-meta, .hljs-attr, .hljs-attribute, .hljs-built_in,
-  .hljs-literal, .hljs-type, .hljs-variable, .hljs-name,
-  .hljs-selector-class, .hljs-selector-id, .hljs-selector-tag,
-  .hljs-tag, .hljs-template-tag, .hljs-template-variable,
-  .hljs-regexp, .hljs-symbol, .hljs-addition, .hljs-deletion,
-  .hljs-quote, .hljs-section, .hljs-emphasis, .hljs-strong,
-  .hljs-property, .hljs-selector-pseudo, .hljs-subst,
-  .hljs-variable\.language_, .hljs-title\.class_,
-  .hljs-title\.function_, .hljs-title\.class_\.inherited__,
-  pre code [class*="hljs-"],
-  .hljs [class*="hljs-"],
   [class*="hljs-"] {
     color: #1a1a1a !important;
     background: transparent !important;
