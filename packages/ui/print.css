@@ -7,8 +7,14 @@
  *       <aside.border-r> (SidebarContainer) ← left sidebar (hide)
  *       <main.flex-1>                       ← scrollable content area
  *         <article.bg-card> (Viewer)        ← the plan card (print this)
+ *           float-right div (Images/Comment/Copy) ← hide
+ *           AnnotationToolstrip (Select/Markup)   ← hide
+ *           <pre.bg-muted/50> (code blocks)       ← restyle for white paper
+ *           <code.bg-muted> (inline code)         ← restyle for white paper
  *       <aside.border-l> (AnnotationPanel)  ← right panel (hide)
  *   Overlays: .annotation-toolbar, .fixed.z-50 modals
+ *
+ * Code blocks import highlight.js github-dark.css — must override all hljs colours.
  */
 
 @media print {
@@ -38,14 +44,12 @@
 
   /* ========== Hide UI Chrome ========== */
 
-  /* Sticky header toolbar — <header class="h-12 ... sticky ..."> */
-  header.sticky,
-  header.h-12 {
+  /* Top header bar (Export, Print, Settings, theme toggle) */
+  header {
     display: none !important;
   }
 
-  /* Sidebar (left) — <aside class="... border-r ..."> from SidebarContainer */
-  /* Annotation panel (right) — <aside class="... border-l ..."> from AnnotationPanel */
+  /* Left sidebar (SidebarContainer) + Right panel (AnnotationPanel) */
   aside {
     display: none !important;
   }
@@ -55,13 +59,39 @@
     display: none !important;
   }
 
-  /* Fixed overlays: modals, export dialog, mobile menus */
+  /* Fixed overlays: modals, export dialog, mobile menus, completion overlay */
   .fixed {
     display: none !important;
   }
 
   /* Resize handles between panels */
   [data-resize-handle] {
+    display: none !important;
+  }
+
+  /* AnnotationToolstrip — Select/Markup/Comment/Redline/Label buttons + "how does this work?" */
+  /* It's a direct child flex-wrap container inside the article */
+  .flex-wrap {
+    display: none !important;
+  }
+
+  /* Float-right action buttons: Images, Comment, Copy (inside Viewer article) */
+  .float-right {
+    display: none !important;
+  }
+
+  /* Code block copy buttons (appear on hover) */
+  pre .absolute,
+  .group > button.absolute {
+    display: none !important;
+  }
+
+  /* Settings button, theme toggle, any other icon buttons in toolbar area */
+  button[title="Settings"],
+  button[title="Toggle theme"],
+  button[title="Add global comment"],
+  button[title="Copy plan"],
+  button[title="Copy file"] {
     display: none !important;
   }
 
@@ -116,6 +146,21 @@
   }
 
   /* ========== Typography ========== */
+
+  /* Force all text to solid black — override theme's muted/foreground variables */
+  body, div, span, p, li, td, th, label, strong, em, b, i {
+    color: #1a1a1a !important;
+  }
+
+  strong, b {
+    font-weight: bold !important;
+    color: #000 !important;
+  }
+
+  em, i {
+    font-style: italic !important;
+    color: #1a1a1a !important;
+  }
 
   h1 {
     font-size: 24pt;
@@ -180,40 +225,58 @@
 
   /* ========== Code & Preformatted ========== */
 
+  /* Inline code — <code class="bg-muted text-sm font-mono"> */
   code {
-    font-family: 'Courier New', Monaco, Consolas, monospace;
-    font-size: 10pt;
-    background: #f5f5f5 !important;
-    color: #333 !important;
-    padding: 0.1em 0.3em;
-    border-radius: 2px;
+    font-family: 'Courier New', Monaco, Consolas, monospace !important;
+    font-size: 10pt !important;
+    background: #e8e8e8 !important;
+    color: #1a1a1a !important;
+    padding: 0.1em 0.4em !important;
+    border-radius: 3px !important;
+    border: 1px solid #ccc !important;
   }
 
+  /* Fenced code block wrapper — <div class="relative group my-5"> */
+  .group {
+    page-break-inside: avoid;
+  }
+
+  /* Fenced code block — <pre class="bg-muted/50 border border-border/30"> */
   pre {
-    margin: 1em 0;
-    padding: 1em;
+    margin: 1em 0 !important;
+    padding: 1em !important;
     background: #f5f5f5 !important;
-    border: 1px solid #ddd !important;
-    border-left: 3px solid #999 !important;
-    border-radius: 4px;
+    border: 1px solid #ccc !important;
+    border-left: 3px solid #888 !important;
+    border-radius: 4px !important;
     page-break-inside: avoid;
     overflow: visible !important;
   }
 
+  /* Code inside pre — <code class="hljs font-mono language-*"> */
   pre code {
-    font-size: 9pt;
-    background: none !important;
-    padding: 0;
-    color: #333 !important;
-    display: block;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    font-size: 9pt !important;
+    background: transparent !important;
+    color: #1a1a1a !important;
+    padding: 0 !important;
+    border: none !important;
+    display: block !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
   }
 
-  /* Monochrome syntax highlighting — flatten all hljs colours to dark gray */
-  pre code [class*="hljs"] {
-    color: #333 !important;
-    background: none !important;
+  /* Override github-dark.css hljs theme — force all syntax to dark gray on light */
+  .hljs {
+    background: transparent !important;
+    color: #1a1a1a !important;
+  }
+
+  pre code span,
+  pre code [class*="hljs-"],
+  .hljs span,
+  .hljs [class*="hljs-"] {
+    color: #1a1a1a !important;
+    background: transparent !important;
     text-decoration: none !important;
     font-style: normal !important;
   }
