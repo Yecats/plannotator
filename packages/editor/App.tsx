@@ -832,26 +832,42 @@ const App: React.FC = () => {
   };
 
   const handleToggleCheckbox = (blockId: string, checked: boolean) => {
-    setCheckboxOverrides(prev => {
-      const next = new Map(prev);
-      next.set(blockId, checked);
-      return next;
-    });
-    // Create an annotation noting the toggle
     const block = blocks.find(b => b.id === blockId);
-    if (block) {
-      const action = checked ? 'Checked' : 'Unchecked';
-      const ann: Annotation = {
-        id: `ann-checkbox-${Date.now()}`,
-        blockId,
-        startOffset: 0,
-        endOffset: block.content.length,
-        type: AnnotationType.COMMENT,
-        text: `${action}: ${block.content}`,
-        originalText: block.content,
-        createdA: Date.now(),
-      };
-      handleAddAnnotation(ann);
+    const isRevertingToOriginal = block && checked === block.checked;
+
+    if (isRevertingToOriginal) {
+      // Undo: remove the override and delete the annotation
+      setCheckboxOverrides(prev => {
+        const next = new Map(prev);
+        next.delete(blockId);
+        return next;
+      });
+      // Remove the checkbox annotation for this block
+      const annId = annotations.find(a => a.id.startsWith(`ann-checkbox-${blockId}-`))?.id;
+      if (annId) {
+        handleDeleteAnnotation(annId);
+      }
+    } else {
+      // Toggle: set the override and create an annotation
+      setCheckboxOverrides(prev => {
+        const next = new Map(prev);
+        next.set(blockId, checked);
+        return next;
+      });
+      if (block) {
+        const action = checked ? 'Checked' : 'Unchecked';
+        const ann: Annotation = {
+          id: `ann-checkbox-${blockId}-${Date.now()}`,
+          blockId,
+          startOffset: 0,
+          endOffset: block.content.length,
+          type: AnnotationType.COMMENT,
+          text: `${action}: ${block.content}`,
+          originalText: block.content,
+          createdA: Date.now(),
+        };
+        handleAddAnnotation(ann);
+      }
     }
   };
 
