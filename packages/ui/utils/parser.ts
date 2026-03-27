@@ -352,6 +352,20 @@ export function replaceBlockInMarkdown(
     }
   }
 
+  // If new content is empty, remove the block entirely (including trailing blank lines)
+  if (newMarkdown.trim() === '') {
+    let removeEnd = endIdx;
+    // Also consume blank separator lines after the block
+    while (removeEnd < lines.length && lines[removeEnd]?.trim() === '') {
+      removeEnd++;
+    }
+    const result = [
+      ...lines.slice(0, startIdx),
+      ...lines.slice(removeEnd),
+    ];
+    return result.join('\n');
+  }
+
   const newLines = newMarkdown.split('\n');
   const result = [
     ...lines.slice(0, startIdx),
