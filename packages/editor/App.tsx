@@ -5,7 +5,7 @@ import { AnnotationPanel } from '@plannotator/ui/components/AnnotationPanel';
 import { ExportModal } from '@plannotator/ui/components/ExportModal';
 import { ImportModal } from '@plannotator/ui/components/ImportModal';
 import { ConfirmDialog } from '@plannotator/ui/components/ConfirmDialog';
-import { Annotation, Block, EditorMode, type InputMethod, type ImageAttachment } from '@plannotator/ui/types';
+import { Annotation, AnnotationType, Block, EditorMode, type InputMethod, type ImageAttachment } from '@plannotator/ui/types';
 import { ThemeProvider } from '@plannotator/ui/components/ThemeProvider';
 import { ModeToggle } from '@plannotator/ui/components/ModeToggle';
 import { AnnotationToolstrip } from '@plannotator/ui/components/AnnotationToolstrip';
@@ -89,6 +89,7 @@ const App: React.FC = () => {
   const [gitUser, setGitUser] = useState<string | undefined>();
   const [isWSL, setIsWSL] = useState(false);
   const [globalAttachments, setGlobalAttachments] = useState<ImageAttachment[]>([]);
+  const [checkboxOverrides, setCheckboxOverrides] = useState<Map<string, boolean>>(new Map());
   const [annotateMode, setAnnotateMode] = useState(false);
   const [annotateSource, setAnnotateSource] = useState<'file' | 'message' | 'folder' | null>(null);
   const [imageBaseDir, setImageBaseDir] = useState<string | undefined>(undefined);
@@ -830,6 +831,30 @@ const App: React.FC = () => {
     setGlobalAttachments(prev => prev.filter(p => p.path !== path));
   };
 
+  const handleToggleCheckbox = (blockId: string, checked: boolean) => {
+    setCheckboxOverrides(prev => {
+      const next = new Map(prev);
+      next.set(blockId, checked);
+      return next;
+    });
+    // Create an annotation noting the toggle
+    const block = blocks.find(b => b.id === blockId);
+    if (block) {
+      const action = checked ? 'Checked' : 'Unchecked';
+      const ann: Annotation = {
+        id: `ann-checkbox-${Date.now()}`,
+        blockId,
+        startOffset: 0,
+        endOffset: block.content.length,
+        type: AnnotationType.COMMENT,
+        text: `${action}: ${block.content}`,
+        originalText: block.content,
+        createdA: Date.now(),
+      };
+      handleAddAnnotation(ann);
+    }
+  };
+
 
   const handleTocNavigate = (blockId: string) => {
     // Navigation handled by TableOfContents component
@@ -1453,6 +1478,8 @@ const App: React.FC = () => {
                   imageBaseDir={imageBaseDir}
                   copyLabel={annotateSource === 'message' ? 'Copy message' : annotateSource === 'file' || annotateSource === 'folder' ? 'Copy file' : undefined}
                   archiveInfo={archive.currentInfo}
+                  onToggleCheckbox={handleToggleCheckbox}
+                  checkboxOverrides={checkboxOverrides}
                 />
               </div>
             </div>
