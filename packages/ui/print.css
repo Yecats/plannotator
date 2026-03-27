@@ -225,11 +225,22 @@
 
   /* ========== Code & Preformatted ========== */
 
+  /* Override theme CSS variables for print context */
+  :root, [class*="theme-"], body {
+    --muted: #e8e8e8 !important;
+    --foreground: #1a1a1a !important;
+    --card: white !important;
+    --background: white !important;
+    --border: #ccc !important;
+  }
+
   /* Inline code — <code class="bg-muted text-sm font-mono"> */
-  code {
+  code,
+  code[class] {
     font-family: 'Courier New', Monaco, Consolas, monospace !important;
     font-size: 10pt !important;
     background: #e8e8e8 !important;
+    background-color: #e8e8e8 !important;
     color: #1a1a1a !important;
     padding: 0.1em 0.4em !important;
     border-radius: 3px !important;
@@ -241,22 +252,33 @@
     page-break-inside: avoid;
   }
 
-  /* Fenced code block — <pre class="bg-muted/50 border border-border/30"> */
-  pre {
+  /* Fenced code block — <pre class="bg-muted/50 border border-border/30">
+   * Must override both background AND background-color to beat Tailwind
+   * utilities that set background-color via CSS variables. */
+  pre,
+  pre[class] {
     margin: 1em 0 !important;
     padding: 1em !important;
     background: #f5f5f5 !important;
+    background-color: #f5f5f5 !important;
     border: 1px solid #ccc !important;
     border-left: 3px solid #888 !important;
     border-radius: 4px !important;
     page-break-inside: avoid;
     overflow: visible !important;
+    color: #1a1a1a !important;
   }
 
-  /* Code inside pre — <code class="hljs font-mono language-*"> */
-  pre code {
+  /* Code inside pre — <code class="hljs font-mono language-*">
+   * Override github-dark.css: .hljs{background:#0d1117;color:#c9d1d9} */
+  pre code,
+  pre code[class],
+  pre code.hljs,
+  code.hljs,
+  code[data-highlighted] {
     font-size: 9pt !important;
     background: transparent !important;
+    background-color: transparent !important;
     color: #1a1a1a !important;
     padding: 0 !important;
     border: none !important;
@@ -265,18 +287,32 @@
     word-wrap: break-word !important;
   }
 
-  /* Override github-dark.css hljs theme — force all syntax to dark gray on light */
+  /* Override github-dark.css hljs base theme */
   .hljs {
     background: transparent !important;
+    background-color: transparent !important;
     color: #1a1a1a !important;
   }
 
-  pre code span,
+  /* Force ALL hljs syntax spans to monochrome dark text */
+  pre span, pre code span, .hljs span, code span,
+  .hljs-keyword, .hljs-string, .hljs-number, .hljs-function,
+  .hljs-title, .hljs-params, .hljs-comment, .hljs-doctag,
+  .hljs-meta, .hljs-attr, .hljs-attribute, .hljs-built_in,
+  .hljs-literal, .hljs-type, .hljs-variable, .hljs-name,
+  .hljs-selector-class, .hljs-selector-id, .hljs-selector-tag,
+  .hljs-tag, .hljs-template-tag, .hljs-template-variable,
+  .hljs-regexp, .hljs-symbol, .hljs-addition, .hljs-deletion,
+  .hljs-quote, .hljs-section, .hljs-emphasis, .hljs-strong,
+  .hljs-property, .hljs-selector-pseudo, .hljs-subst,
+  .hljs-variable\.language_, .hljs-title\.class_,
+  .hljs-title\.function_, .hljs-title\.class_\.inherited__,
   pre code [class*="hljs-"],
-  .hljs span,
-  .hljs [class*="hljs-"] {
+  .hljs [class*="hljs-"],
+  [class*="hljs-"] {
     color: #1a1a1a !important;
     background: transparent !important;
+    background-color: transparent !important;
     text-decoration: none !important;
     font-style: normal !important;
   }
