@@ -138,6 +138,21 @@ const App: React.FC = () => {
     return parseMarkdownToBlocks(content || editedMarkdown);
   }, [blocks, blockEdits, editedMarkdown]);
 
+  // Track which displayBlocks are actually different from original blocks.
+  // A block is "dirty" if it's new or its content changed vs the original.
+  const dirtyBlockIds = useMemo(() => {
+    if (blockEdits.size === 0) return new Set<string>();
+    const originalById = new Map(blocks.map(b => [b.id, b]));
+    const dirty = new Set<string>();
+    for (const db of displayBlocks) {
+      const orig = originalById.get(db.id);
+      if (!orig || orig.content.trim() !== db.content.trim()) {
+        dirty.add(db.id);
+      }
+    }
+    return dirty;
+  }, [blocks, displayBlocks, blockEdits]);
+
   // Compute diff for user edits (reuses existing plan diff engine)
   const editDiff = useMemo(() => {
     if (!hasEdits) return null;
@@ -1424,7 +1439,7 @@ const App: React.FC = () => {
                 onArchiveSelect={archive.select}
                 isLoadingArchive={archive.isLoading}
                 editDiffStats={editDiff?.stats ?? null}
-                editedBlockCount={blockEdits.size}
+                editedBlockCount={dirtyBlockIds.size}
                 onDiscardEdits={hasEdits ? handleDiscardEdits : undefined}
               />
               <ResizeHandle {...tocResize.handleProps} className="hidden lg:block" side="left" />
@@ -1533,6 +1548,7 @@ const App: React.FC = () => {
                   archiveInfo={archive.currentInfo}
                   editMode={editMode}
                   blockEdits={blockEdits}
+                  dirtyBlockIds={dirtyBlockIds}
                   onBlockEdit={handleBlockEdit}
                 />
               </div>

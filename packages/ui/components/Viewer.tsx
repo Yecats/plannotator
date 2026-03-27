@@ -73,6 +73,7 @@ interface ViewerProps {
   // Edit mode props
   editMode?: boolean;
   blockEdits?: Map<string, string>;
+  dirtyBlockIds?: Set<string>;
   onBlockEdit?: (blockId: string, newContent: string) => void;
 }
 
@@ -144,6 +145,7 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
   archiveInfo,
   editMode = false,
   blockEdits,
+  dirtyBlockIds,
   onBlockEdit,
 }, ref) => {
   const [copied, setCopied] = useState(false);
@@ -580,21 +582,21 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
           group.type === 'list-group' ? (
             <div key={group.key} data-pinpoint-group="list" className="py-1 -mx-2 px-2">
               {group.blocks.map(block => (
-                <EditableBlock key={block.id} block={block} editMode={editMode} editedContent={blockEdits?.get(block.id)} onEdit={onBlockEdit ?? (() => {})}>
+                <EditableBlock key={block.id} block={block} editMode={editMode} editedContent={blockEdits?.get(block.id)} isDirty={dirtyBlockIds?.has(block.id)} onEdit={onBlockEdit ?? (() => {})}>
                   <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} block={block} onOpenLinkedDoc={onOpenLinkedDoc} />
                 </EditableBlock>
               ))}
             </div>
           ) : group.block.type === 'code' && isMermaidLanguage(group.block.language) ? (
-            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} isDirty={dirtyBlockIds?.has(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
               <MermaidBlock block={group.block} />
             </EditableBlock>
           ) : group.block.type === 'code' && isGraphvizLanguage(group.block.language) ? (
-            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} isDirty={dirtyBlockIds?.has(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
               <GraphvizBlock block={group.block} />
             </EditableBlock>
           ) : group.block.type === 'code' ? (
-            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} isDirty={dirtyBlockIds?.has(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
               <CodeBlock
               block={group.block}
               onHover={inputMethod === 'pinpoint' ? () => {} : (element) => {
@@ -625,7 +627,7 @@ export const Viewer = forwardRef<ViewerHandle, ViewerProps>(({
             />
             </EditableBlock>
           ) : (
-            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
+            <EditableBlock key={group.block.id} block={group.block} editMode={editMode} editedContent={blockEdits?.get(group.block.id)} isDirty={dirtyBlockIds?.has(group.block.id)} onEdit={onBlockEdit ?? (() => {})}>
               <BlockRenderer imageBaseDir={imageBaseDir} onImageClick={(src, alt) => setLightbox({ src, alt })} block={group.block} onOpenLinkedDoc={onOpenLinkedDoc} />
             </EditableBlock>
           )

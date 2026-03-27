@@ -6,6 +6,7 @@ interface EditableBlockProps {
   block: Block;
   editMode: boolean;
   editedContent: string | undefined;
+  isDirty?: boolean;
   onEdit: (blockId: string, newContent: string) => void;
   children: React.ReactNode;
 }
@@ -19,6 +20,7 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
   block,
   editMode,
   editedContent,
+  isDirty = false,
   onEdit,
   children,
 }) => {
@@ -135,7 +137,7 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
   return (
     <div
       className={`relative w-full cursor-text rounded-sm ${
-        isEdited
+        isDirty
           ? 'outline outline-2 outline-offset-2 outline-blue-400/40'
           : 'hover:outline hover:outline-1 hover:outline-offset-2 hover:outline-gray-400/30'
       }`}
@@ -143,7 +145,7 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
       title="Click to edit"
     >
       {children}
-      {isEdited && (
+      {isDirty && (
         <span className="absolute -left-4 top-0 text-blue-400 text-xs opacity-70" title="Edited">
           ✎
         </span>
