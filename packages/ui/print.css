@@ -1,11 +1,27 @@
-/* Print Stylesheet — optimized for white paper output without annotations */
+/* Print Stylesheet — optimized for white paper output without annotations.
+ *
+ * DOM structure (packages/editor/App.tsx):
+ *   <div.h-screen>                         ← app shell
+ *     <header.h-12.sticky>                  ← toolbar (hide)
+ *     <div.flex-1.flex>                     ← body row
+ *       <aside.border-r> (SidebarContainer) ← left sidebar (hide)
+ *       <main.flex-1>                       ← scrollable content area
+ *         <article.bg-card> (Viewer)        ← the plan card (print this)
+ *       <aside.border-l> (AnnotationPanel)  ← right panel (hide)
+ *   Overlays: .annotation-toolbar, .fixed.z-50 modals
+ */
 
 @media print {
-  /* ========== Page & Layout ========== */
-  
+  /* ========== Reset & Page ========== */
+
   * {
-    /* Disable theme transitions during print */
     transition: none !important;
+    animation: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0.75in;
   }
 
   html, body {
@@ -13,59 +29,94 @@
     padding: 0;
     background: white !important;
     color: #1a1a1a !important;
-  }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
     font-size: 11pt;
-  }
-
-  @page {
-    size: A4;
-    margin: 0.5in;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   /* ========== Hide UI Chrome ========== */
 
-  /* Hide annotations panel, toolbars, sidebars, theme switcher, etc. */
-  [data-annotation-panel],
-  [data-sidebar],
-  [data-sidebar-container],
-  .AnnotationPanel,
-  .SidebarContainer,
-  .Toolbar,
-  .toolbar,
-  .ExportModal,
-  .Modal,
-  .modal,
-  [role="toolbar"],
-  button[aria-label*="Print"],
-  button[aria-label*="Export"],
-  button[aria-label*="Settings"],
-  button[aria-label*="Theme"],
-  .theme-switcher,
-  .settings-panel,
-  .export-modal,
-  nav,
-  aside,
-  header {
+  /* Sticky header toolbar — <header class="h-12 ... sticky ..."> */
+  header.sticky,
+  header.h-12 {
+    display: none !important;
+  }
+
+  /* Sidebar (left) — <aside class="... border-r ..."> from SidebarContainer */
+  /* Annotation panel (right) — <aside class="... border-l ..."> from AnnotationPanel */
+  aside {
+    display: none !important;
+  }
+
+  /* Floating annotation toolbar (portalled to body) */
+  .annotation-toolbar {
+    display: none !important;
+  }
+
+  /* Fixed overlays: modals, export dialog, mobile menus */
+  .fixed {
+    display: none !important;
+  }
+
+  /* Resize handles between panels */
+  [data-resize-handle] {
     display: none !important;
   }
 
   /* ========== Main Content Area ========== */
 
-  /* Make content full width and visible */
-  main, [role="main"], .Viewer, .viewer {
+  /* App shell — remove h-screen / overflow constraints */
+  .h-screen {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Body row flex container */
+  .flex-1.flex.overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* <main> scrollable area — flatten for print */
+  main {
     width: 100% !important;
-    margin: 0 !important;
+    overflow: visible !important;
+    background: white !important;
     padding: 0 !important;
+  }
+
+  /* Inner centering wrapper inside <main> */
+  main > div {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* <article> — the plan card rendered by Viewer.tsx */
+  article {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 1em !important;
+    background: white !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* The relative z-50 wrapper around the article */
+  article.bg-card {
+    background: white !important;
+  }
+
+  /* Grid background pattern */
+  .bg-grid {
+    background-image: none !important;
     background: white !important;
   }
 
   /* ========== Typography ========== */
 
-  /* Headings */
   h1 {
     font-size: 24pt;
     font-weight: bold;
@@ -106,7 +157,6 @@
     color: #000 !important;
   }
 
-  /* Paragraphs */
   p {
     margin: 0.5em 0;
     color: #1a1a1a !important;
@@ -131,7 +181,7 @@
   /* ========== Code & Preformatted ========== */
 
   code {
-    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    font-family: 'Courier New', Monaco, Consolas, monospace;
     font-size: 10pt;
     background: #f5f5f5 !important;
     color: #333 !important;
@@ -143,9 +193,11 @@
     margin: 1em 0;
     padding: 1em;
     background: #f5f5f5 !important;
-    border-left: 3px solid #999;
+    border: 1px solid #ddd !important;
+    border-left: 3px solid #999 !important;
+    border-radius: 4px;
     page-break-inside: avoid;
-    overflow: auto;
+    overflow: visible !important;
   }
 
   pre code {
@@ -158,45 +210,12 @@
     word-wrap: break-word;
   }
 
-  /* Monochrome syntax highlighting — all code is dark gray on light background */
-  pre code .hljs-attr,
-  pre code .hljs-attribute,
-  pre code .hljs-built_in,
-  pre code .hljs-builtin-name,
-  pre code .hljs-class,
-  pre code .hljs-class-name,
-  pre code .hljs-doctag,
-  pre code .hljs-function,
-  pre code .hljs-name,
-  pre code .hljs-section,
-  pre code .hljs-tag,
-  pre code .hljs-title,
-  pre code .hljs-type,
-  pre code .hljs-variable,
-  pre code .hljs-emphasis,
-  pre code .hljs-string,
-  pre code .hljs-symbol,
-  pre code .hljs-code,
-  pre code .hljs-literal,
-  pre code .hljs-number,
-  pre code .hljs-regexp,
-  pre code .hljs-keyword,
-  pre code .hljs-meta,
-  pre code .hljs-comment,
-  pre code .hljs-deletion,
-  pre code .hljs-addition,
-  pre code .hljs-quote,
-  pre code .hljs-selector-class,
-  pre code .hljs-selector-id,
-  pre code .hljs-selector-pseudo,
-  pre code .hljs-selector-tag,
-  pre code .hljs-template-tag,
-  pre code .hljs-template-variable,
-  pre code .hljs-variable,
-  pre code [class] {
+  /* Monochrome syntax highlighting — flatten all hljs colours to dark gray */
+  pre code [class*="hljs"] {
     color: #333 !important;
     background: none !important;
     text-decoration: none !important;
+    font-style: normal !important;
   }
 
   /* ========== Tables ========== */
@@ -241,8 +260,8 @@
   blockquote {
     margin: 1em 0;
     padding: 0.5em 0 0.5em 1em;
-    border-left: 4px solid #999;
-    background: #f0f0f0 !important;
+    border-left: 4px solid #999 !important;
+    background: #f7f7f7 !important;
     color: #333 !important;
   }
 
@@ -273,7 +292,6 @@
     word-break: break-all;
   }
 
-  /* Don't show URLs for internal/anchor links */
   a[href^="#"]::after {
     content: "";
   }
@@ -287,87 +305,28 @@
     margin: 1em 0;
   }
 
-  /* ========== Frontmatter / Metadata ========== */
-
-  .FrontmatterCard {
-    margin-bottom: 1em;
-    padding: 0.5em;
-    border: 1px solid #ccc;
-    background: #f9f9f9 !important;
-  }
-
-  .FrontmatterCard h3 {
-    margin-top: 0;
-  }
-
-  /* ========== Block Elements ========== */
-
-  .Block {
-    page-break-inside: avoid;
-    margin-bottom: 0.5em;
-  }
-
   /* ========== Diagrams (Mermaid, Graphviz) ========== */
 
-  .mermaid-wrapper,
-  .graphviz-wrapper,
-  .MermaidBlock,
-  .GraphvizBlock,
-  svg[data-diagram],
-  [data-mermaid],
-  [data-graphviz] {
-    page-break-inside: avoid;
-    margin: 1em 0;
-    max-width: 100%;
-  }
-
-  /* Ensure SVG diagrams scale for print */
   svg {
     max-width: 100%;
     height: auto !important;
+    page-break-inside: avoid;
   }
 
-  /* ========== Utilities ========== */
+  /* ========== Page Break Hints ========== */
 
-  /* Avoid orphaned headings at page breaks */
   h1, h2, h3, h4, h5, h6 {
     page-break-after: avoid;
   }
 
-  /* Avoid orphaned paragraphs */
-  p, ul, ol, pre, blockquote, table {
-    page-break-after: avoid;
+  pre, blockquote, table, figure {
+    page-break-inside: avoid;
   }
 
-  /* Allow content blocks to break if necessary */
-  .Block {
-    page-break-inside: auto;
-  }
+  /* ========== Print colour control ========== */
 
-  /* Print in black ink (force print dialog "print background graphics" if enabled) */
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    color-adjust: exact;
-  }
-
-  /* Disable animations and transitions */
-  * {
-    animation: none !important;
-    animation-delay: 0 !important;
-    animation-direction: normal !important;
-    animation-duration: 0 !important;
-    animation-fill-mode: none !important;
-    animation-iteration-count: 1 !important;
-    animation-play-state: paused !important;
-    animation-timing-function: linear !important;
-  }
-}
-
-/* Print-specific light theme override (ensure it applies in print) */
-@media print {
-  body, html {
-    background: white !important;
-    color: #000 !important;
   }
 }
