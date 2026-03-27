@@ -30,10 +30,12 @@ export const EditableBlock: React.FC<EditableBlockProps> = ({
 
   const startEditing = useCallback(() => {
     if (!editMode || isRemoved) return;
-    const source = editedContent ?? blockToMarkdown(block);
-    setDraft(source);
+    // Always use the block's current content (from displayBlocks re-parse),
+    // not editedContent from blockEdits which may be stale after re-parse
+    // split an edit across multiple blocks.
+    setDraft(blockToMarkdown(block));
     setEditing(true);
-  }, [editMode, editedContent, block]);
+  }, [editMode, isRemoved, block]);
 
   const saveEdit = useCallback(() => {
     const original = blockToMarkdown(block);
