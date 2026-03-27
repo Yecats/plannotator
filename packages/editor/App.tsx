@@ -139,14 +139,25 @@ const App: React.FC = () => {
   }, [blocks, blockEdits, editedMarkdown]);
 
   // Track which displayBlocks are actually different from original blocks.
-  // A block is "dirty" if it's new or its content changed vs the original.
+  // Uses content matching (not ID) because re-parsing after block insertion
+  // shifts all sequential IDs, making ID-based comparison unreliable.
   const dirtyBlockIds = useMemo(() => {
     if (blockEdits.size === 0) return new Set<string>();
-    const originalById = new Map(blocks.map(b => [b.id, b]));
+    // Build a multiset of original block content (trimmed) so we can match
+    // each displayBlock against an original. Multiset handles duplicates.
+    const originalContentCounts = new Map<string, number>();
+    for (const b of blocks) {
+      const key = `${b.type}:${b.content.trim()}`;
+      originalContentCounts.set(key, (originalContentCounts.get(key) ?? 0) + 1);
+    }
     const dirty = new Set<string>();
     for (const db of displayBlocks) {
-      const orig = originalById.get(db.id);
-      if (!orig || orig.content.trim() !== db.content.trim()) {
+      const key = `${db.type}:${db.content.trim()}`;
+      const count = originalContentCounts.get(key) ?? 0;
+      if (count > 0) {
+        // This block matches an original — not dirty; consume one match
+        originalContentCounts.set(key, count - 1);
+      } else {
         dirty.add(db.id);
       }
     }
