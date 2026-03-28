@@ -468,6 +468,20 @@ const App: React.FC = () => {
     setBlocks(parseMarkdownToBlocks(markdown));
   }, [markdown]);
 
+  // Clean up stale checkbox overrides when blocks change (e.g. markdown reloaded)
+  useEffect(() => {
+    if (checkboxOverrides.size === 0) return;
+    const blockIds = new Set(blocks.map(b => b.id));
+    const stale = [...checkboxOverrides.keys()].filter(id => !blockIds.has(id));
+    if (stale.length > 0) {
+      setCheckboxOverrides(prev => {
+        const next = new Map(prev);
+        stale.forEach(id => next.delete(id));
+        return next;
+      });
+    }
+  }, [blocks]);
+
   // Auto-save to notes apps on plan arrival (each gated by its autoSave toggle)
   const autoSaveAttempted = useRef(false);
   const autoSaveResultsRef = useRef<NoteAutoSaveResults>({});
@@ -836,19 +850,20 @@ const App: React.FC = () => {
     const isRevertingToOriginal = block && checked === block.checked;
 
     if (isRevertingToOriginal) {
-      // Undo: remove the override and delete the annotation
+      // Undo: remove the override and delete ALL checkbox annotations for this block
       setCheckboxOverrides(prev => {
         const next = new Map(prev);
         next.delete(blockId);
         return next;
       });
-      // Remove the checkbox annotation for this block
-      const annId = annotations.find(a => a.id.startsWith(`ann-checkbox-${blockId}-`))?.id;
-      if (annId) {
-        handleDeleteAnnotation(annId);
-      }
+      // Find all checkbox annotations for this specific block (fixes prefix collision + rapid toggle)
+      const toDelete = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
+      toDelete.forEach(a => handleDeleteAnnotation(a.id));
     } else {
-      // Toggle: set the override and create an annotation
+      // Toggle: remove any existing checkbox annotations for this block first (prevents duplicates from rapid clicks)
+      const existing = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
+      existing.forEach(a => handleDeleteAnnotation(a.id));
+
       setCheckboxOverrides(prev => {
         const next = new Map(prev);
         next.set(blockId, checked);
