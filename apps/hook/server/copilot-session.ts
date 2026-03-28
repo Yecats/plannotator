@@ -20,7 +20,7 @@
  *   session.*         — Session lifecycle events
  */
 
-import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -148,44 +148,6 @@ export function findCopilotPlanContent(sessionId?: string): string | null {
   if (candidates.length === 0) return null;
 
   return readFileSync(candidates[0].path, "utf-8");
-}
-
-/**
- * Write updated plan content back to the session's plan.md.
- * Used when the user edits the plan in the Plannotator UI.
- */
-export function writeCopilotPlanContent(editedPlan: string, sessionId?: string): boolean {
-  const copilotHome = process.env.COPILOT_HOME || join(homedir(), ".copilot");
-  const sessionsDir = join(copilotHome, "session-state");
-
-  if (sessionId && /^[a-f0-9-]{36}$/i.test(sessionId)) {
-    const planPath = join(sessionsDir, sessionId, "plan.md");
-    if (existsSync(planPath)) {
-      writeFileSync(planPath, editedPlan, "utf-8");
-      return true;
-    }
-  }
-
-  // Fallback: find most recently modified plan.md
-  if (!existsSync(sessionsDir)) return false;
-
-  const candidates = readdirSync(sessionsDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => {
-      const p = join(sessionsDir, e.name, "plan.md");
-      try {
-        return { path: p, mtime: statSync(p).mtimeMs };
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean) as Array<{ path: string; mtime: number }>;
-
-  candidates.sort((a, b) => b.mtime - a.mtime);
-  if (candidates.length === 0) return false;
-
-  writeFileSync(candidates[0].path, editedPlan, "utf-8");
-  return true;
 }
 
 // --- Message Extraction ---
