@@ -819,8 +819,14 @@ const App: React.FC = () => {
     if (id && window.innerWidth < 768) setIsPanelOpen(true);
   }, []);
 
-  const handleDeleteAnnotation = (id: string) => {
+  // Core annotation removal — highlight cleanup + state filter + selection clear
+  const removeAnnotation = (id: string) => {
     viewerRef.current?.removeHighlight(id);
+    setAnnotations(prev => prev.filter(a => a.id !== id));
+    if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+  };
+
+  const handleDeleteAnnotation = (id: string) => {
     // If this is a checkbox annotation, revert the visual override
     if (id.startsWith('ann-checkbox-')) {
       const ann = annotations.find(a => a.id === id);
@@ -832,8 +838,7 @@ const App: React.FC = () => {
         });
       }
     }
-    setAnnotations(prev => prev.filter(a => a.id !== id));
-    if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+    removeAnnotation(id);
   };
 
   const handleEditAnnotation = (id: string, updates: Partial<Annotation>) => {
@@ -869,11 +874,11 @@ const App: React.FC = () => {
       });
       // Find all checkbox annotations for this specific block (fixes prefix collision + rapid toggle)
       const toDelete = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
-      toDelete.forEach(a => handleDeleteAnnotation(a.id));
+      toDelete.forEach(a => removeAnnotation(a.id));
     } else {
       // Toggle: remove any existing checkbox annotations for this block first (prevents duplicates from rapid clicks)
       const existing = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
-      existing.forEach(a => handleDeleteAnnotation(a.id));
+      existing.forEach(a => removeAnnotation(a.id));
 
       setCheckboxOverrides(prev => {
         const next = new Map(prev);
