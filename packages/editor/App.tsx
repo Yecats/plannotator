@@ -870,7 +870,7 @@ const App: React.FC = () => {
         return next;
       });
       if (block) {
-        const action = checked ? 'Checked' : 'Unchecked';
+        const action = checked ? 'Mark as completed' : 'Mark as not completed';
         const ann: Annotation = {
           id: `ann-checkbox-${blockId}-${Date.now()}`,
           blockId,
