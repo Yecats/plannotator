@@ -10,6 +10,7 @@ interface MobileMenuProps {
   onDownloadAnnotations: () => void;
   onCopyShareLink: () => void;
   onOpenImport: () => void;
+  onPrint: () => void;
   shareUrl?: string;
   sharingEnabled: boolean;
   className?: string;
@@ -24,6 +25,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   onDownloadAnnotations,
   onCopyShareLink,
   onOpenImport,
+  onPrint,
   sharingEnabled,
   className,
 }) => {
@@ -120,6 +122,13 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
             label="Download Annotations"
           />
 
+          {/* Print */}
+          <MenuItem
+            onClick={() => handleAction(onPrint)}
+            icon={<PrintIcon />}
+            label="Print Plan"
+          />
+
           {/* Share link */}
           {sharingEnabled && (
             <MenuItem
@@ -201,5 +210,11 @@ const LinkIcon = () => (
 const ImportIcon = () => (
   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+  </svg>
+);
+
+const PrintIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
   </svg>
 );

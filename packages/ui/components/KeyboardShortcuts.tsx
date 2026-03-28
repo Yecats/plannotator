@@ -76,6 +76,7 @@ const planShortcuts: ShortcutSection[] = [
     shortcuts: [
       { keys: [modKey, enter], desc: 'Submit / Approve' },
       { keys: [modKey, 'S'], desc: 'Save to notes app' },
+      { keys: [modKey, 'P'], desc: 'Print plan' },
       { keys: ['Esc'], desc: 'Close dialog' },
     ],
   },

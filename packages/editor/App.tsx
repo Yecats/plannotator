@@ -30,6 +30,7 @@ import { getEditorMode, saveEditorMode } from '@plannotator/ui/utils/editorMode'
 import { getInputMethod, saveInputMethod } from '@plannotator/ui/utils/inputMethod';
 import { useInputMethodSwitch } from '@plannotator/ui/hooks/useInputMethodSwitch';
 import { usePrintMode } from '@plannotator/ui/hooks/usePrintMode';
+import { modKey } from '@plannotator/ui/utils/platform';
 import { useResizablePanel } from '@plannotator/ui/hooks/useResizablePanel';
 import { ResizeHandle } from '@plannotator/ui/components/ResizeHandle';
 import { MobileMenu } from '@plannotator/ui/components/MobileMenu';
@@ -976,6 +977,30 @@ const App: React.FC = () => {
     submitted, isApiMode, markdown, annotationsOutput,
   ]);
 
+  // Cmd/Ctrl+P keyboard shortcut — print plan
+  useEffect(() => {
+    const handlePrintShortcut = (e: KeyboardEvent) => {
+      if (e.key !== 'p' || !(e.metaKey || e.ctrlKey)) return;
+
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (showExport || showFeedbackPrompt || showClaudeCodeWarning ||
+          showAgentWarning || showPermissionModeSetup || pendingPasteImage) return;
+
+      if (submitted) return;
+
+      e.preventDefault();
+      window.print();
+    };
+
+    window.addEventListener('keydown', handlePrintShortcut);
+    return () => window.removeEventListener('keydown', handlePrintShortcut);
+  }, [
+    showExport, showFeedbackPrompt, showClaudeCodeWarning, showAgentWarning,
+    showPermissionModeSetup, pendingPasteImage, submitted,
+  ]);
+
   // Close export dropdown on click outside
   useEffect(() => {
     if (!showExportDropdown) return;
@@ -1209,6 +1234,17 @@ const App: React.FC = () => {
                       </svg>
                       Download Annotations
                     </button>
+                    <button
+                      onClick={() => { setShowExportDropdown(false); window.print(); }}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Print Plan
+                      <span className="ml-auto text-[10px] text-muted-foreground/60">{modKey}+P</span>
+                    </button>
+                    <div className="my-1 border-t border-border" />
                     {isApiMode && isObsidianConfigured() && (
                       <button
                         onClick={() => handleQuickSaveToNotes('obsidian')}
@@ -1267,17 +1303,6 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={() => window.print()}
-                className="px-2.5 py-1 rounded-md text-xs font-medium bg-muted hover:bg-muted/80 transition-colors"
-                title="Print plan (Ctrl+P)"
-              >
-                <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                <span className="hidden sm:inline">Print</span>
-              </button>
             </div>
 
             {/* Mobile hamburger menu */}
@@ -1299,6 +1324,7 @@ const App: React.FC = () => {
                 setTimeout(() => setNoteSaveToast(null), 3000);
               }}
               onOpenImport={() => setShowImport(true)}
+              onPrint={() => window.print()}
               sharingEnabled={sharingEnabled}
             />
           </div>
