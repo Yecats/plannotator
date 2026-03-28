@@ -870,14 +870,25 @@ const App: React.FC = () => {
         return next;
       });
       if (block) {
+        // Find the nearest heading above this block for section context
+        const blockIdx = blocks.indexOf(block);
+        let sectionHeading = '';
+        for (let i = blockIdx - 1; i >= 0; i--) {
+          if (blocks[i].type === 'heading') {
+            sectionHeading = blocks[i].content;
+            break;
+          }
+        }
+
         const action = checked ? 'Mark as completed' : 'Mark as not completed';
+        const context = sectionHeading ? ` (under "${sectionHeading}")` : ` (line ${block.startLine})`;
         const ann: Annotation = {
           id: `ann-checkbox-${blockId}-${Date.now()}`,
           blockId,
           startOffset: 0,
           endOffset: block.content.length,
           type: AnnotationType.COMMENT,
-          text: `${action}: ${block.content}`,
+          text: `${action}${context}: ${block.content}`,
           originalText: block.content,
           createdA: Date.now(),
         };
