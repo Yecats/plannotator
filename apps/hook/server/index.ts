@@ -67,6 +67,7 @@ import { registerSession, unregisterSession, listSessions } from "@plannotator/s
 import { openBrowser } from "@plannotator/server/browser";
 import { detectProjectName } from "@plannotator/server/project";
 import { planDenyFeedback } from "@plannotator/shared/feedback-templates";
+import type { Origin } from "@plannotator/shared/agents";
 import { findSessionLogsForCwd, resolveSessionLogByPpid, findSessionLogsByAncestorWalk, getLastRenderedMessage, type RenderedMessage } from "./session-log";
 import { findCodexRolloutByThreadId, getLastCodexMessage } from "./codex-session";
 import { findCopilotPlanContent, findCopilotSessionForCwd, getLastCopilotMessage } from "./copilot-session";
@@ -102,6 +103,13 @@ const shareBaseUrl = process.env.PLANNOTATOR_SHARE_URL || undefined;
 
 // Paste service URL for short URL sharing
 const pasteApiUrl = process.env.PLANNOTATOR_PASTE_URL || undefined;
+
+// Detect calling agent from environment variables set by agent runtimes.
+// Priority: Codex > Copilot CLI > Claude Code (default fallback)
+const detectedOrigin: Origin =
+  process.env.CODEX_THREAD_ID ? "codex" :
+  process.env.COPILOT_CLI ? "copilot-cli" :
+  "claude-code";
 
 if (args[0] === "sessions") {
   // ============================================
@@ -215,7 +223,7 @@ if (args[0] === "sessions") {
     rawPatch,
     gitRef,
     error: diffError,
-    origin: "claude-code",
+    origin: detectedOrigin,
     diffType: isPRMode ? undefined : "uncommitted",
     gitContext,
     prMetadata,
@@ -337,7 +345,7 @@ if (args[0] === "sessions") {
   const server = await startAnnotateServer({
     markdown,
     filePath: absolutePath,
-    origin: "claude-code",
+    origin: detectedOrigin,
     mode: annotateMode,
     folderPath,
     sharingEnabled,
@@ -456,7 +464,7 @@ if (args[0] === "sessions") {
   const server = await startAnnotateServer({
     markdown: lastMessage.text,
     filePath: "last-message",
-    origin: isCodex ? "codex" : "claude-code",
+    origin: detectedOrigin,
     mode: "annotate-last",
     sharingEnabled,
     shareBaseUrl,
@@ -499,7 +507,7 @@ if (args[0] === "sessions") {
 
   const server = await startPlannotatorServer({
     plan: "",
-    origin: "claude-code",
+    origin: detectedOrigin,
     mode: "archive",
     sharingEnabled,
     shareBaseUrl,
@@ -704,7 +712,7 @@ if (args[0] === "sessions") {
   // Start the plan review server
   const server = await startPlannotatorServer({
     plan: planContent,
-    origin: "claude-code",
+    origin: detectedOrigin,
     permissionMode,
     sharingEnabled,
     shareBaseUrl,
