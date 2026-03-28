@@ -67,6 +67,7 @@ import { registerSession, unregisterSession, listSessions } from "@plannotator/s
 import { openBrowser } from "@plannotator/server/browser";
 import { detectProjectName } from "@plannotator/server/project";
 import { planDenyFeedback } from "@plannotator/shared/feedback-templates";
+import type { Origin } from "@plannotator/shared/agents";
 import { findSessionLogsForCwd, resolveSessionLogByPpid, findSessionLogsByAncestorWalk, getLastRenderedMessage, type RenderedMessage } from "./session-log";
 import { findCodexRolloutByThreadId, getLastCodexMessage } from "./codex-session";
 import { findCopilotPlanContent, findCopilotSessionForCwd, getLastCopilotMessage } from "./copilot-session";
@@ -104,8 +105,8 @@ const shareBaseUrl = process.env.PLANNOTATOR_SHARE_URL || undefined;
 const pasteApiUrl = process.env.PLANNOTATOR_PASTE_URL || undefined;
 
 // Detect calling agent from environment variables set by agent runtimes.
-// Priority: Codex > Copilot CLI > Claude Code (default, since plugin format is .claude-plugin)
-const detectedOrigin =
+// Priority: Codex > Copilot CLI > Claude Code (default fallback)
+const detectedOrigin: Origin =
   process.env.CODEX_THREAD_ID ? "codex" :
   process.env.COPILOT_CLI ? "copilot-cli" :
   "claude-code";
