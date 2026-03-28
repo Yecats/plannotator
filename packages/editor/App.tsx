@@ -821,6 +821,17 @@ const App: React.FC = () => {
 
   const handleDeleteAnnotation = (id: string) => {
     viewerRef.current?.removeHighlight(id);
+    // If this is a checkbox annotation, revert the visual override
+    if (id.startsWith('ann-checkbox-')) {
+      const ann = annotations.find(a => a.id === id);
+      if (ann) {
+        setCheckboxOverrides(prev => {
+          const next = new Map(prev);
+          next.delete(ann.blockId);
+          return next;
+        });
+      }
+    }
     setAnnotations(prev => prev.filter(a => a.id !== id));
     if (selectedAnnotationId === id) setSelectedAnnotationId(null);
   };
