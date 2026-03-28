@@ -225,6 +225,7 @@ if (args[0] === "sessions") {
     error: diffError,
     origin: detectedOrigin,
     diffType: isPRMode ? undefined : "uncommitted",
+    gitContext,
     prMetadata,
     sharingEnabled,
     shareBaseUrl,
