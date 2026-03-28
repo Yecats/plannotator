@@ -108,11 +108,11 @@
     display: none !important;
   }
 
-  .flex-wrap {
+  [data-print-hide] {
     display: none !important;
   }
 
-  .float-right {
+  .sidebar-tab-flag {
     display: none !important;
   }
 
@@ -131,19 +131,20 @@
 
   /* ========== Main Content Area ========== */
 
-  .h-screen {
+  [data-print-region="root"] {
     height: auto !important;
     overflow: visible !important;
   }
 
-  .flex-1.flex.overflow-hidden {
+  [data-print-region="content"] {
     overflow: visible !important;
   }
 
-  main {
+  main, [data-print-region="document"] {
     width: 100% !important;
     overflow: visible !important;
     background: white !important;
+    background-image: none !important;
     padding: 0 !important;
   }
 
@@ -152,7 +153,7 @@
     margin: 0 !important;
   }
 
-  article {
+  article, [data-print-region="article"] {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
@@ -161,15 +162,6 @@
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-  }
-
-  article.bg-card {
-    background: white !important;
-  }
-
-  .bg-grid {
-    background-image: none !important;
-    background: white !important;
   }
 
   /* ========== Typography ========== */

@@ -29,6 +29,7 @@ import { getUIPreferences, type UIPreferences, type PlanWidth } from '@plannotat
 import { getEditorMode, saveEditorMode } from '@plannotator/ui/utils/editorMode';
 import { getInputMethod, saveInputMethod } from '@plannotator/ui/utils/inputMethod';
 import { useInputMethodSwitch } from '@plannotator/ui/hooks/useInputMethodSwitch';
+import { usePrintMode } from '@plannotator/ui/hooks/usePrintMode';
 import { useResizablePanel } from '@plannotator/ui/hooks/useResizablePanel';
 import { ResizeHandle } from '@plannotator/ui/components/ResizeHandle';
 import { MobileMenu } from '@plannotator/ui/components/MobileMenu';
@@ -122,27 +123,7 @@ const App: React.FC = () => {
   const viewerRef = useRef<ViewerHandle>(null);
   const containerRef = useRef<HTMLElement>(null);
 
-  // Print mode: add/remove 'plannotator-print' class on <html> for print styling.
-  // Includes visibilitychange fallback for Firefox, which may not fire afterprint
-  // when the user closes print preview without printing.
-  useEffect(() => {
-    const onBeforePrint = () => document.documentElement.classList.add('plannotator-print');
-    const onAfterPrint = () => document.documentElement.classList.remove('plannotator-print');
-    const onVisibilityChange = () => {
-      if (!document.hidden && document.documentElement.classList.contains('plannotator-print')) {
-        document.documentElement.classList.remove('plannotator-print');
-      }
-    };
-    window.addEventListener('beforeprint', onBeforePrint);
-    window.addEventListener('afterprint', onAfterPrint);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      window.removeEventListener('beforeprint', onBeforePrint);
-      window.removeEventListener('afterprint', onAfterPrint);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      document.documentElement.classList.remove('plannotator-print');
-    };
-  }, []);
+  usePrintMode();
 
   // Resizable panels
   const panelResize = useResizablePanel({ storageKey: 'plannotator-panel-width' });
@@ -1025,7 +1006,7 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider defaultTheme="dark">
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <div data-print-region="root" className="h-screen flex flex-col bg-background overflow-hidden">
         {/* Minimal Header */}
         <header className="h-12 flex items-center justify-between px-2 md:px-4 border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-[50]">
           <div className="flex items-center gap-2 md:gap-3">
@@ -1337,7 +1318,7 @@ const App: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className={`flex-1 flex overflow-hidden relative z-0 ${isResizing ? 'select-none' : ''}`}>
+        <div data-print-region="content" className={`flex-1 flex overflow-hidden relative z-0 ${isResizing ? 'select-none' : ''}`}>
           {/* Tater sprites — inside content wrapper so z-0 stacking context applies */}
           {taterMode && <TaterSpriteRunning />}
           {/* Left Sidebar: collapsed tab flags (when sidebar is closed) */}
@@ -1400,7 +1381,7 @@ const App: React.FC = () => {
           )}
 
           {/* Document Area */}
-          <main ref={containerRef} className="flex-1 min-w-0 overflow-y-auto bg-grid">
+          <main data-print-region="document" ref={containerRef} className="flex-1 min-w-0 overflow-y-auto bg-grid">
             <ConfirmDialog
               isOpen={!!draftBanner}
               onClose={dismissDraft}
