@@ -778,6 +778,14 @@ const ImageLightbox: React.FC<{ src: string; alt: string; onClose: () => void }>
 /**
  * Renders inline markdown: **bold**, *italic*, `code`, [links](url)
  */
+const sanitizeUrl = (url: string): string => {
+  const trimmed = url.trim().toLowerCase();
+  if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+    return '#';
+  }
+  return url;
+};
+
 const InlineMarkdown: React.FC<{ text: string; onOpenLinkedDoc?: (path: string) => void; imageBaseDir?: string; onImageClick?: (src: string, alt: string) => void }> = ({ text, onOpenLinkedDoc, imageBaseDir, onImageClick }) => {
   const parts: React.ReactNode[] = [];
   let remaining = text;
@@ -823,7 +831,7 @@ const InlineMarkdown: React.FC<{ text: string; onOpenLinkedDoc?: (path: string) 
         parts.push(
           <a
             key={key++}
-            href={targetPath}
+            href={sanitizeUrl(targetPath)}
             onClick={(e) => {
               e.preventDefault();
               onOpenLinkedDoc(targetPath);
@@ -879,7 +887,7 @@ const InlineMarkdown: React.FC<{ text: string; onOpenLinkedDoc?: (path: string) 
         parts.push(
           <a
             key={key++}
-            href={linkUrl}
+            href={sanitizeUrl(linkUrl)}
             onClick={(e) => {
               e.preventDefault();
               onOpenLinkedDoc(linkUrl);
@@ -898,7 +906,7 @@ const InlineMarkdown: React.FC<{ text: string; onOpenLinkedDoc?: (path: string) 
         parts.push(
           <a
             key={key++}
-            href={linkUrl}
+            href={sanitizeUrl(linkUrl)}
             className="text-primary underline underline-offset-2 hover:text-primary/80"
           >
             {linkText}
@@ -908,7 +916,7 @@ const InlineMarkdown: React.FC<{ text: string; onOpenLinkedDoc?: (path: string) 
         parts.push(
           <a
             key={key++}
-            href={linkUrl}
+            href={sanitizeUrl(linkUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary underline underline-offset-2 hover:text-primary/80"

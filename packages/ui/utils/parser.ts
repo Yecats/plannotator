@@ -333,17 +333,14 @@ export function replaceBlockInMarkdown(
   const lines = fullMarkdown.split('\n');
   const startIdx = block.startLine - 1; // 0-based
 
-  // Find the end of this block: either the next block's startLine - 1 or end of file
+  // Find the end of this block using estimateBlockEndLine or next block boundary
   const blockIndex = allBlocks.findIndex(b => b.id === block.id);
   let endIdx: number;
   if (blockIndex < allBlocks.length - 1) {
     const nextBlock = allBlocks[blockIndex + 1];
-    // Walk back from next block's start to skip blank lines between blocks
-    endIdx = nextBlock.startLine - 2; // 0-based, exclusive of spacing
-    while (endIdx > startIdx && lines[endIdx]?.trim() === '') {
-      endIdx--;
-    }
-    endIdx++; // make exclusive
+    const estimatedEnd = estimateBlockEndLine(block); // 1-based inclusive
+    // Use the tighter of estimated end and next block start (skip inter-block blanks)
+    endIdx = Math.min(estimatedEnd, nextBlock.startLine - 1); // 0-based exclusive
   } else {
     // Last block: go to end of file, but trim trailing blank lines
     endIdx = lines.length;

@@ -139,25 +139,19 @@ const App: React.FC = () => {
   }, [blocks, blockEdits, editedMarkdown]);
 
   // Track which displayBlocks are actually different from original blocks.
-  // Uses content matching (not ID) because re-parsing after block insertion
-  // shifts all sequential IDs, making ID-based comparison unreliable.
+  // Only iterates over edited blocks (O(edits)) rather than all blocks.
   const dirtyBlockIds = useMemo(() => {
     if (blockEdits.size === 0) return new Set<string>();
-    // Build a multiset of original block content (trimmed) so we can match
-    // each displayBlock against an original. Multiset handles duplicates.
-    const originalContentCounts = new Map<string, number>();
-    for (const b of blocks) {
-      const key = `${b.type}:${b.content.trim()}`;
-      originalContentCounts.set(key, (originalContentCounts.get(key) ?? 0) + 1);
-    }
     const dirty = new Set<string>();
+    for (const [blockId, editedContent] of blockEdits) {
+      const original = blocks.find(b => b.id === blockId);
+      if (!original || original.content.trim() !== editedContent.trim()) {
+        dirty.add(blockId);
+      }
+    }
+    // Also mark any new blocks (from splits) that don't exist in originals
     for (const db of displayBlocks) {
-      const key = `${db.type}:${db.content.trim()}`;
-      const count = originalContentCounts.get(key) ?? 0;
-      if (count > 0) {
-        // This block matches an original — not dirty; consume one match
-        originalContentCounts.set(key, count - 1);
-      } else {
+      if (!blocks.find(b => b.id === db.id)) {
         dirty.add(db.id);
       }
     }
@@ -182,14 +176,15 @@ const App: React.FC = () => {
       next.set(blockId, newContent);
       return next;
     });
-    // Remove annotations on the edited block
-    setAnnotations(prev => prev.filter(a => a.blockId !== blockId));
-    // Remove web-highlighter marks for removed annotations
-    const impacted = annotations.filter(a => a.blockId === blockId);
-    if (impacted.length > 0 && viewerRef.current) {
-      impacted.forEach(a => viewerRef.current?.removeHighlight(a.id));
-    }
-  }, [annotations]);
+    // Remove annotations on the edited block and clear their highlights
+    setAnnotations(prev => {
+      const impacted = prev.filter(a => a.blockId === blockId);
+      if (impacted.length > 0 && viewerRef.current) {
+        impacted.forEach(a => viewerRef.current?.removeHighlight(a.id));
+      }
+      return prev.filter(a => a.blockId !== blockId);
+    });
+  }, []);
 
   const handleDiscardEdits = useCallback(() => {
     setBlockEdits(new Map());
