@@ -110,6 +110,8 @@
 
   [data-print-hide] {
     display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .sidebar-tab-flag {
@@ -157,11 +159,17 @@
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 1em !important;
+    padding: 0 !important;
     background: white !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+  }
+
+  /* Collapse first heading top margin for tight print layout */
+  article h1:first-of-type,
+  [data-print-region="article"] h1:first-of-type {
+    margin-top: 0 !important;
   }
 
   /* ========== Typography ========== */
