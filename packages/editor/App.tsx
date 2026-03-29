@@ -56,6 +56,7 @@ import type { ArchivedPlan } from '@plannotator/ui/components/sidebar/ArchiveBro
 import { PlanDiffViewer } from '@plannotator/ui/components/plan-diff/PlanDiffViewer';
 import type { PlanDiffMode } from '@plannotator/ui/components/plan-diff/PlanDiffModeSwitcher';
 import { DEMO_PLAN_CONTENT } from './demoPlan';
+import { useCheckboxOverrides } from './hooks/useCheckboxOverrides';
 
 type NoteAutoSaveResults = {
   obsidian?: boolean;
@@ -804,10 +805,30 @@ const App: React.FC = () => {
     if (id && window.innerWidth < 768) setIsPanelOpen(true);
   }, []);
 
-  const handleDeleteAnnotation = (id: string) => {
+  // Core annotation removal — highlight cleanup + state filter + selection clear
+  const removeAnnotation = (id: string) => {
     viewerRef.current?.removeHighlight(id);
     setAnnotations(prev => prev.filter(a => a.id !== id));
     if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+  };
+
+  // Interactive checkbox toggling with annotation tracking
+  const checkbox = useCheckboxOverrides({
+    blocks,
+    annotations,
+    addAnnotation: handleAddAnnotation,
+    removeAnnotation,
+  });
+
+  const handleDeleteAnnotation = (id: string) => {
+    // If this is a checkbox annotation, revert the visual override
+    if (id.startsWith('ann-checkbox-')) {
+      const ann = annotations.find(a => a.id === id);
+      if (ann) {
+        checkbox.revertOverride(ann.blockId);
+      }
+    }
+    removeAnnotation(id);
   };
 
   const handleEditAnnotation = (id: string, updates: Partial<Annotation>) => {
@@ -1453,6 +1474,8 @@ const App: React.FC = () => {
                   imageBaseDir={imageBaseDir}
                   copyLabel={annotateSource === 'message' ? 'Copy message' : annotateSource === 'file' || annotateSource === 'folder' ? 'Copy file' : undefined}
                   archiveInfo={archive.currentInfo}
+                  onToggleCheckbox={checkbox.toggle}
+                  checkboxOverrides={checkbox.overrides}
                 />
               </div>
             </div>
