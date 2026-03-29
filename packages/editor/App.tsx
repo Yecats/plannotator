@@ -5,7 +5,7 @@ import { AnnotationPanel } from '@plannotator/ui/components/AnnotationPanel';
 import { ExportModal } from '@plannotator/ui/components/ExportModal';
 import { ImportModal } from '@plannotator/ui/components/ImportModal';
 import { ConfirmDialog } from '@plannotator/ui/components/ConfirmDialog';
-import { Annotation, AnnotationType, Block, EditorMode, type InputMethod, type ImageAttachment } from '@plannotator/ui/types';
+import { Annotation, Block, EditorMode, type InputMethod, type ImageAttachment } from '@plannotator/ui/types';
 import { ThemeProvider } from '@plannotator/ui/components/ThemeProvider';
 import { ModeToggle } from '@plannotator/ui/components/ModeToggle';
 import { AnnotationToolstrip } from '@plannotator/ui/components/AnnotationToolstrip';
@@ -56,6 +56,7 @@ import type { ArchivedPlan } from '@plannotator/ui/components/sidebar/ArchiveBro
 import { PlanDiffViewer } from '@plannotator/ui/components/plan-diff/PlanDiffViewer';
 import type { PlanDiffMode } from '@plannotator/ui/components/plan-diff/PlanDiffModeSwitcher';
 import { DEMO_PLAN_CONTENT } from './demoPlan';
+import { useCheckboxOverrides } from './hooks/useCheckboxOverrides';
 
 type NoteAutoSaveResults = {
   obsidian?: boolean;
@@ -89,7 +90,6 @@ const App: React.FC = () => {
   const [gitUser, setGitUser] = useState<string | undefined>();
   const [isWSL, setIsWSL] = useState(false);
   const [globalAttachments, setGlobalAttachments] = useState<ImageAttachment[]>([]);
-  const [checkboxOverrides, setCheckboxOverrides] = useState<Map<string, boolean>>(new Map());
   const [annotateMode, setAnnotateMode] = useState(false);
   const [annotateSource, setAnnotateSource] = useState<'file' | 'message' | 'folder' | null>(null);
   const [imageBaseDir, setImageBaseDir] = useState<string | undefined>(undefined);
@@ -468,20 +468,6 @@ const App: React.FC = () => {
     setBlocks(parseMarkdownToBlocks(markdown));
   }, [markdown]);
 
-  // Clean up stale checkbox overrides when blocks change (e.g. markdown reloaded)
-  useEffect(() => {
-    if (checkboxOverrides.size === 0) return;
-    const blockIds = new Set(blocks.map(b => b.id));
-    const stale = [...checkboxOverrides.keys()].filter(id => !blockIds.has(id));
-    if (stale.length > 0) {
-      setCheckboxOverrides(prev => {
-        const next = new Map(prev);
-        stale.forEach(id => next.delete(id));
-        return next;
-      });
-    }
-  }, [blocks]);
-
   // Auto-save to notes apps on plan arrival (each gated by its autoSave toggle)
   const autoSaveAttempted = useRef(false);
   const autoSaveResultsRef = useRef<NoteAutoSaveResults>({});
@@ -826,16 +812,20 @@ const App: React.FC = () => {
     if (selectedAnnotationId === id) setSelectedAnnotationId(null);
   };
 
+  // Interactive checkbox toggling with annotation tracking
+  const checkbox = useCheckboxOverrides({
+    blocks,
+    annotations,
+    addAnnotation: handleAddAnnotation,
+    removeAnnotation,
+  });
+
   const handleDeleteAnnotation = (id: string) => {
     // If this is a checkbox annotation, revert the visual override
     if (id.startsWith('ann-checkbox-')) {
       const ann = annotations.find(a => a.id === id);
       if (ann) {
-        setCheckboxOverrides(prev => {
-          const next = new Map(prev);
-          next.delete(ann.blockId);
-          return next;
-        });
+        checkbox.revertOverride(ann.blockId);
       }
     }
     removeAnnotation(id);
@@ -859,58 +849,6 @@ const App: React.FC = () => {
 
   const handleRemoveGlobalAttachment = (path: string) => {
     setGlobalAttachments(prev => prev.filter(p => p.path !== path));
-  };
-
-  const handleToggleCheckbox = (blockId: string, checked: boolean) => {
-    const block = blocks.find(b => b.id === blockId);
-    const isRevertingToOriginal = block && checked === block.checked;
-
-    if (isRevertingToOriginal) {
-      // Undo: remove the override and delete ALL checkbox annotations for this block
-      setCheckboxOverrides(prev => {
-        const next = new Map(prev);
-        next.delete(blockId);
-        return next;
-      });
-      // Find all checkbox annotations for this specific block (fixes prefix collision + rapid toggle)
-      const toDelete = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
-      toDelete.forEach(a => removeAnnotation(a.id));
-    } else {
-      // Toggle: remove any existing checkbox annotations for this block first (prevents duplicates from rapid clicks)
-      const existing = annotations.filter(a => a.blockId === blockId && a.id.startsWith('ann-checkbox-'));
-      existing.forEach(a => removeAnnotation(a.id));
-
-      setCheckboxOverrides(prev => {
-        const next = new Map(prev);
-        next.set(blockId, checked);
-        return next;
-      });
-      if (block) {
-        // Find the nearest heading above this block for section context
-        const blockIdx = blocks.indexOf(block);
-        let sectionHeading = '';
-        for (let i = blockIdx - 1; i >= 0; i--) {
-          if (blocks[i].type === 'heading') {
-            sectionHeading = blocks[i].content;
-            break;
-          }
-        }
-
-        const action = checked ? 'Mark as completed' : 'Mark as not completed';
-        const context = sectionHeading ? ` (under "${sectionHeading}")` : ` (line ${block.startLine})`;
-        const ann: Annotation = {
-          id: `ann-checkbox-${blockId}-${Date.now()}`,
-          blockId,
-          startOffset: 0,
-          endOffset: block.content.length,
-          type: AnnotationType.COMMENT,
-          text: `${action}${context}: ${block.content}`,
-          originalText: block.content,
-          createdA: Date.now(),
-        };
-        handleAddAnnotation(ann);
-      }
-    }
   };
 
 
@@ -1536,8 +1474,8 @@ const App: React.FC = () => {
                   imageBaseDir={imageBaseDir}
                   copyLabel={annotateSource === 'message' ? 'Copy message' : annotateSource === 'file' || annotateSource === 'folder' ? 'Copy file' : undefined}
                   archiveInfo={archive.currentInfo}
-                  onToggleCheckbox={handleToggleCheckbox}
-                  checkboxOverrides={checkboxOverrides}
+                  onToggleCheckbox={checkbox.toggle}
+                  checkboxOverrides={checkbox.overrides}
                 />
               </div>
             </div>
