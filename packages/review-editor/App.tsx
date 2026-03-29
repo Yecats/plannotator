@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { type Origin, getAgentName } from '@plannotator/shared/agents';
 import { ThemeProvider, useTheme } from '@plannotator/ui/components/ThemeProvider';
 import { ModeToggle } from '@plannotator/ui/components/ModeToggle';
 import { ConfirmDialog } from '@plannotator/ui/components/ConfirmDialog';
@@ -43,7 +44,7 @@ interface DiffData {
   files: DiffFile[];
   rawPatch: string;
   gitRef: string;
-  origin?: 'opencode' | 'claude-code' | 'pi';
+  origin?: Origin;
   diffType?: string;
   gitContext?: GitContext;
   sharingEnabled?: boolean;
@@ -99,7 +100,7 @@ const ReviewApp: React.FC = () => {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [hideViewedFiles, setHideViewedFiles] = useState(false);
-  const [origin, setOrigin] = useState<'opencode' | 'claude-code' | 'pi' | null>(null);
+  const [origin, setOrigin] = useState<Origin | null>(null);
   const [gitUser, setGitUser] = useState<string | undefined>();
   const [isWSL, setIsWSL] = useState(false);
   const [diffType, setDiffType] = useState<string>('uncommitted');
@@ -383,7 +384,7 @@ const ReviewApp: React.FC = () => {
       .then((data: {
         rawPatch: string;
         gitRef: string;
-        origin?: 'opencode' | 'claude-code' | 'pi';
+        origin?: Origin;
         diffType?: string;
         gitContext?: GitContext;
         sharingEnabled?: boolean;
@@ -1566,10 +1567,10 @@ const ReviewApp: React.FC = () => {
                 ? `Your approval was submitted to ${platformLabel}.`
                 : `Your feedback was submitted to ${platformLabel}.`
               : submitted === 'approved'
-                ? `${origin === 'claude-code' ? 'Claude Code' : origin === 'opencode' ? 'OpenCode' : origin === 'pi' ? 'Pi' : 'Your agent'} will proceed with the changes.`
-                : `${origin === 'claude-code' ? 'Claude Code' : origin === 'opencode' ? 'OpenCode' : origin === 'pi' ? 'Pi' : 'Your agent'} will address your review feedback.`
+                ? `${getAgentName(origin)} will proceed with the changes.`
+                : `${getAgentName(origin)} will address your review feedback.`
           }
-          agentLabel={origin === 'claude-code' ? 'Claude Code' : origin === 'opencode' ? 'OpenCode' : origin === 'pi' ? 'Pi' : 'Your agent'}
+          agentLabel={getAgentName(origin)}
         />
 
         {/* Update notification */}
